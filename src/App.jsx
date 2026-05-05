@@ -3,102 +3,12 @@ import React, { useMemo, useState } from "react";
 const newId = () => Math.random().toString(36).slice(2, 10);
 
 const personaTemplates = [
-  {
-    name: "Skeptische Fachkraft",
-    role: "Operative Praxis",
-    stance: "vorsichtig-kritisch",
-    influence: 4,
-    affectedness: 5,
-    trust: 3,
-    aiLiteracy: 2,
-    riskSense: 5,
-    changeEnergy: 2,
-    informalRole: "Meinungsgeber*in im Team",
-    conflictStyle: "kritisch nachfragend",
-    trigger: "unklare Datenschutz- oder Kontrollfragen",
-    learningNeed: "Sicherheit, Grenzen und konkrete Beispiele",
-    communicationNeed: "klare Zusicherung: keine Leistungsbewertung durch KI"
-  },
-  {
-    name: "Pragmatische Teamleitung",
-    role: "Mittlere Führung",
-    stance: "offen, aber überlastet",
-    influence: 5,
-    affectedness: 4,
-    trust: 4,
-    aiLiteracy: 3,
-    riskSense: 4,
-    changeEnergy: 3,
-    informalRole: "Übersetzer*in zwischen Strategie und Alltag",
-    conflictStyle: "ausgleichend-pragmatisch",
-    trigger: "zusätzliche Aufgaben ohne Entlastung",
-    learningNeed: "Entscheidungshilfen und klare Kommunikationsbausteine",
-    communicationNeed: "kurz, konkret, belastungssensibel"
-  },
-  {
-    name: "KI-affine Verwaltungskraft",
-    role: "Verwaltung / Support",
-    stance: "experimentierfreudig",
-    influence: 3,
-    affectedness: 4,
-    trust: 4,
-    aiLiteracy: 5,
-    riskSense: 3,
-    changeEnergy: 5,
-    informalRole: "frühe Anwender*in",
-    conflictStyle: "lösungsorientiert",
-    trigger: "zu restriktive Verbote",
-    learningNeed: "Freiräume, Beispiele, klare Freigabegrenzen",
-    communicationNeed: "nicht ausbremsen, sondern sicher ermöglichen"
-  },
-  {
-    name: "Datenschutzrolle",
-    role: "Governance",
-    stance: "prüfend und begrenzend",
-    influence: 4,
-    affectedness: 3,
-    trust: 3,
-    aiLiteracy: 4,
-    riskSense: 5,
-    changeEnergy: 3,
-    informalRole: "Stoppsignal und Schutzfunktion",
-    conflictStyle: "regel- und risikoorientiert",
-    trigger: "Uploads, personenbezogene Daten, unklare Anbieter",
-    learningNeed: "Datenflüsse, Anbieter, Zwecke, Löschlogik",
-    communicationNeed: "frühzeitig einbinden, nicht nachträglich absegnen lassen"
-  },
-  {
-    name: "MAV / Interessenvertretung",
-    role: "Mitarbeitendenvertretung",
-    stance: "schutzorientiert-prüfend",
-    influence: 5,
-    affectedness: 4,
-    trust: 3,
-    aiLiteracy: 3,
-    riskSense: 5,
-    changeEnergy: 3,
-    informalRole: "Legitimations- und Frühwarnrolle",
-    conflictStyle: "interessenklärend",
-    trigger: "fertige Entscheidungen ohne Beteiligung",
-    learningNeed: "Beteiligungsrechte, Grenzen, Schutz vor Verhaltenskontrolle",
-    communicationNeed: "früh, transparent, mit echter Gestaltungsmöglichkeit"
-  },
-  {
-    name: "Qualitätsmanagement",
-    role: "QM / Prozesssteuerung",
-    stance: "strukturierend",
-    influence: 4,
-    affectedness: 3,
-    trust: 4,
-    aiLiteracy: 4,
-    riskSense: 4,
-    changeEnergy: 4,
-    informalRole: "Dokumentations- und Prozessanker",
-    conflictStyle: "klärend-systematisch",
-    trigger: "unklare Zuständigkeiten und nicht dokumentierte Abweichungen",
-    learningNeed: "Nachweislogik, Review-Prozesse, Prozessschnittstellen",
-    communicationNeed: "konkrete Verantwortlichkeiten und überprüfbare Standards"
-  }
+  { name: "Skeptische Fachkraft", role: "Operative Praxis", stance: "vorsichtig-kritisch", influence: 4, affectedness: 5, trust: 3, aiLiteracy: 2, riskSense: 5, changeEnergy: 2, informalRole: "Meinungsgeber*in im Team", conflictStyle: "kritisch nachfragend", trigger: "unklare Datenschutz- oder Kontrollfragen", learningNeed: "Sicherheit, Grenzen und konkrete Beispiele", communicationNeed: "klare Zusicherung: keine Leistungsbewertung durch KI" },
+  { name: "Pragmatische Teamleitung", role: "Mittlere Führung", stance: "offen, aber überlastet", influence: 5, affectedness: 4, trust: 4, aiLiteracy: 3, riskSense: 4, changeEnergy: 3, informalRole: "Übersetzer*in zwischen Strategie und Alltag", conflictStyle: "ausgleichend-pragmatisch", trigger: "zusätzliche Aufgaben ohne Entlastung", learningNeed: "Entscheidungshilfen und klare Kommunikationsbausteine", communicationNeed: "kurz, konkret, belastungssensibel" },
+  { name: "KI-affine Verwaltungskraft", role: "Verwaltung / Support", stance: "experimentierfreudig", influence: 3, affectedness: 4, trust: 4, aiLiteracy: 5, riskSense: 3, changeEnergy: 5, informalRole: "frühe Anwender*in", conflictStyle: "lösungsorientiert", trigger: "zu restriktive Verbote", learningNeed: "Freiräume, Beispiele, klare Freigabegrenzen", communicationNeed: "nicht ausbremsen, sondern sicher ermöglichen" },
+  { name: "Datenschutzrolle", role: "Governance", stance: "prüfend und begrenzend", influence: 4, affectedness: 3, trust: 3, aiLiteracy: 4, riskSense: 5, changeEnergy: 3, informalRole: "Stoppsignal und Schutzfunktion", conflictStyle: "regel- und risikoorientiert", trigger: "Uploads, personenbezogene Daten, unklare Anbieter", learningNeed: "Datenflüsse, Anbieter, Zwecke, Löschlogik", communicationNeed: "frühzeitig einbinden, nicht nachträglich absegnen lassen" },
+  { name: "MAV / Interessenvertretung", role: "Mitarbeitendenvertretung", stance: "schutzorientiert-prüfend", influence: 5, affectedness: 4, trust: 3, aiLiteracy: 3, riskSense: 5, changeEnergy: 3, informalRole: "Legitimations- und Frühwarnrolle", conflictStyle: "interessenklärend", trigger: "fertige Entscheidungen ohne Beteiligung", learningNeed: "Beteiligungsrechte, Grenzen, Schutz vor Verhaltenskontrolle", communicationNeed: "früh, transparent, mit echter Gestaltungsmöglichkeit" },
+  { name: "Qualitätsmanagement", role: "QM / Prozesssteuerung", stance: "strukturierend", influence: 4, affectedness: 3, trust: 4, aiLiteracy: 4, riskSense: 4, changeEnergy: 4, informalRole: "Dokumentations- und Prozessanker", conflictStyle: "klärend-systematisch", trigger: "unklare Zuständigkeiten und nicht dokumentierte Abweichungen", learningNeed: "Nachweislogik, Review-Prozesse, Prozessschnittstellen", communicationNeed: "konkrete Verantwortlichkeiten und überprüfbare Standards" }
 ];
 
 const resourceTemplates = [
@@ -152,6 +62,10 @@ function resourceGap(r) {
   return r.direction === "low_good" ? Number(r.current) - Number(r.target) : Number(r.target) - Number(r.current);
 }
 
+function strategyScore(s) {
+  return s.acceptance * 3 + s.control * 3 + s.innovation * 2 + s.speed - s.risk * 3;
+}
+
 function compute(state) {
   const hasPrivacy = state.interventions.some((i) => /daten|datenschutz|grenze|faq/i.test(`${i.name} ${i.target}`));
   const hasParticipation = state.interventions.some((i) => /einwand|beteilig|freiwillig|workshop/i.test(`${i.name} ${i.target}`));
@@ -164,10 +78,6 @@ function compute(state) {
   const risk = Math.round(Math.max(0, 100 - (acceptance * 0.35 + governance * 0.4 + learning * 0.15 + resourceStability * 0.1)));
   const bestStrategy = [...state.strategies].sort((a, b) => strategyScore(b) - strategyScore(a))[0];
   return { acceptance, governance, learning, resources: Math.round(resourceStability), risk, deficits, riskyAssumptions, hasPrivacy, hasParticipation, bestStrategy };
-}
-
-function strategyScore(s) {
-  return s.acceptance * 3 + s.control * 3 + s.innovation * 2 + s.speed - s.risk * 3;
 }
 
 function buildReport(state, sim, gptReport) {
@@ -218,10 +128,6 @@ function buildReport(state, sim, gptReport) {
   ];
 }
 
-function Icon({ children }) {
-  return <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">{children}</span>;
-}
-
 function Card({ children, className = "" }) {
   return <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>{children}</section>;
 }
@@ -240,7 +146,17 @@ function Rating({ label, value, onChange }) {
 }
 
 function Header({ reset }) {
-  return <div className="rounded-3xl bg-slate-950 p-8 text-white"><div className="mb-3 inline-flex rounded-full border border-white/20 px-3 py-1 text-sm">GPT-gestützte Organisationssimulation</div><h1 className="text-4xl font-bold">KI-Kernel GPT</h1><p className="mt-3 max-w-3xl text-slate-300">Beratungsfähiges Entscheidungs-, Lern- und Simulationssystem für KI-Readiness, Workshops, Beteiligungsprozesse und Veränderungsvorhaben.</p><button onClick={reset} className="mt-5 rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-950">Beispiel neu laden</button></div>;
+  return (
+    <div className="rounded-3xl bg-slate-950 p-8 text-white">
+      <div className="mb-3 inline-flex rounded-full border border-white/20 px-3 py-1 text-sm">GPT-gestützte Organisationssimulation</div>
+      <h1 className="text-4xl font-bold">KI-Kernel GPT</h1>
+      <p className="mt-3 max-w-3xl text-slate-300">Beratungsfähiges Entscheidungs-, Lern- und Simulationssystem für KI-Readiness, Workshops, Beteiligungsprozesse und Veränderungsvorhaben.</p>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <button onClick={reset} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-950">Beispiel neu laden</button>
+        <a href="/hilfe.html" target="_blank" rel="noreferrer" className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/20">Hilfe öffnen</a>
+      </div>
+    </div>
+  );
 }
 
 function Dashboard({ sim }) {
@@ -250,7 +166,7 @@ function Dashboard({ sim }) {
 
 function ContextPanel({ state, setState }) {
   const update = (key, value) => setState((s) => ({ ...s, context: { ...s.context, [key]: value } }));
-  return <Card><h2 className="mb-4 flex items-center gap-2 text-xl font-bold"><Icon>1</Icon>Ausgangslage</h2><div className="grid gap-4 md:grid-cols-2"><TextInput label="Titel" value={state.context.title} onChange={(v) => update("title", v)} /><TextInput label="Domäne" value={state.context.domain} onChange={(v) => update("domain", v)} /><div className="md:col-span-2"><TextInput label="Entscheidungsfrage" value={state.context.decisionQuestion} onChange={(v) => update("decisionQuestion", v)} textarea /></div><TextInput label="Ziel" value={state.context.goal} onChange={(v) => update("goal", v)} textarea /><TextInput label="Grenzen / Nicht-Zwecke" value={state.context.boundaries} onChange={(v) => update("boundaries", v)} textarea /></div></Card>;
+  return <Card><h2 className="mb-4 text-xl font-bold">Ausgangslage</h2><div className="grid gap-4 md:grid-cols-2"><TextInput label="Titel" value={state.context.title} onChange={(v) => update("title", v)} /><TextInput label="Domäne" value={state.context.domain} onChange={(v) => update("domain", v)} /><div className="md:col-span-2"><TextInput label="Entscheidungsfrage" value={state.context.decisionQuestion} onChange={(v) => update("decisionQuestion", v)} textarea /></div><TextInput label="Ziel" value={state.context.goal} onChange={(v) => update("goal", v)} textarea /><TextInput label="Grenzen / Nicht-Zwecke" value={state.context.boundaries} onChange={(v) => update("boundaries", v)} textarea /></div></Card>;
 }
 
 function AssumptionsPanel({ state, setState }) {
@@ -335,5 +251,5 @@ export default function App() {
     strategies: <StrategiesPanel state={state} setState={setState} />,
     report: <ReportPanel state={state} sim={sim} />
   };
-  return <main className="min-h-screen bg-slate-100 p-4 text-slate-900 md:p-8"><div className="mx-auto max-w-7xl space-y-5"><Header reset={() => setState(start)} /><nav className="sticky top-2 z-10 overflow-x-auto rounded-2xl border bg-white/90 p-2 shadow-sm backdrop-blur"><div className="flex min-w-max gap-2">{tabs.map(([key, label]) => <button key={key} onClick={() => setTab(key)} className={`rounded-xl px-3 py-2 text-sm font-bold ${tab === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}</div></nav>{panels[tab]}<div className="rounded-2xl border bg-white p-4 text-xs leading-5 text-slate-500">Hinweis: Der OpenAI-Key gehört ausschließlich in die Serverumgebung, z. B. als Coolify Environment Variable. Keine echten personenbezogenen Profile verwenden.</div></div></main>;
+  return <main className="min-h-screen bg-slate-100 p-4 text-slate-900 md:p-8"><div className="mx-auto max-w-7xl space-y-5"><Header reset={() => setState(start)} /><nav className="sticky top-2 z-10 overflow-x-auto rounded-2xl border bg-white/90 p-2 shadow-sm backdrop-blur"><div className="flex min-w-max gap-2">{tabs.map(([key, label]) => <button key={key} onClick={() => setTab(key)} className={`rounded-xl px-3 py-2 text-sm font-bold ${tab === key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>)}<a href="/hilfe.html" target="_blank" rel="noreferrer" className="rounded-xl px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100">Hilfe</a></div></nav>{panels[tab]}<div className="rounded-2xl border bg-white p-4 text-xs leading-5 text-slate-500">Hinweis: Der OpenAI-Key gehört ausschließlich in die Serverumgebung, z. B. als Coolify Environment Variable. Keine echten personenbezogenen Profile verwenden. <a href="/hilfe.html" target="_blank" rel="noreferrer" className="font-bold text-slate-900 underline">Hilfe öffnen</a></div></div></main>;
 }
