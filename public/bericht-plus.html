@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bericht+ · KI-Kernel GPT</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
+    body { margin:0; background:#f1f5f9; line-height:1.55; }
+    header { background:#020617; color:white; padding:42px 24px; }
+    main { max-width:1180px; margin:0 auto; padding:24px; }
+    .hero { max-width:1180px; margin:0 auto; }
+    h1 { font-size: clamp(30px, 5vw, 52px); margin:12px 0; line-height:1.05; }
+    h2 { margin:0 0 12px; font-size:22px; }
+    h3 { margin:18px 0 8px; font-size:18px; }
+    .badge { display:inline-block; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 12px; color:#cbd5e1; font-size:14px; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:22px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,.05); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
+    label { display:block; font-weight:750; font-size:14px; color:#334155; margin-bottom:6px; }
+    select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font:inherit; background:white; }
+    textarea { min-height:88px; }
+    button, .btn { appearance:none; border:1px solid #cbd5e1; border-radius:14px; padding:10px 14px; background:white; color:#0f172a; font-weight:800; cursor:pointer; text-decoration:none; display:inline-block; }
+    .primary { background:#020617; color:white; border-color:#020617; }
+    .muted { color:#64748b; font-size:14px; }
+    .pill { display:inline-block; border-radius:999px; background:#f8fafc; border:1px solid #e2e8f0; padding:5px 10px; margin:2px; font-size:12px; font-weight:750; }
+    .good { background:#ecfdf5; border-color:#bbf7d0; }
+    .warn { background:#fffbeb; border-color:#fde68a; }
+    .bad { background:#fff1f2; border-color:#fecdd3; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { border-bottom:1px solid #e2e8f0; padding:10px; text-align:left; vertical-align:top; }
+    th { background:#f8fafc; }
+    pre { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:18px; padding:18px; overflow:auto; }
+    .report { background:#ffffff; border:1px solid #cbd5e1; border-radius:22px; padding:28px; }
+    .report h2 { border-bottom:1px solid #e2e8f0; padding-bottom:8px; margin-top:26px; }
+    .report h2:first-child { margin-top:0; }
+    @media print { header, .controls, .btn, button { display:none !important; } body { background:white; } main { max-width:none; padding:0; } .card, .report { border:none; box-shadow:none; border-radius:0; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="badge">Bericht+ · Schritt 4</span>
+    <h1>Vom Szenario zum Beratungsdokument</h1>
+    <p>Diese Seite erzeugt aus gespeicherten Szenarien entweder einen ausführlichen Arbeitsreport oder ein verdichtetes Management-Briefing.</p>
+    <p><a class="btn" href="/">Zurück zur App</a> <a class="btn" href="/beziehungsmodell.html">Beziehungen</a> <a class="btn" href="/phasenmodell.html">Phasen</a> <a class="btn" href="/vergleich-plus.html">Vergleich+</a></p>
+  </div>
+</header>
+<main>
+  <section class="card controls">
+    <h2>Bericht erzeugen</h2>
+    <div class="grid">
+      <div><label>Gespeichertes Szenario</label><select id="scenarioSelect"></select></div>
+      <div><label>Berichtsmodus</label><select id="mode"><option value="work">Arbeitsreport</option><option value="briefing">Management-Briefing</option></select></div>
+      <div><label>Adressat</label><select id="audience"><option>interne Beratung</option><option>Leitung / Vorstand</option><option>Projektgruppe</option><option>QM / Governance</option><option>Workshopmoderation</option></select></div>
+    </div>
+    <div class="grid" style="margin-top:16px;">
+      <div><label>Bearbeiterhinweis optional</label><textarea id="note" placeholder="z. B. Schwerpunkt auf KI-Governance, Beteiligung oder Workshopplanung"></textarea></div>
+      <div><label>Entscheidungsbedarf optional</label><textarea id="decision" placeholder="Welche Entscheidung soll der Bericht vorbereiten?"></textarea></div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="primary" onclick="renderReport()">Bericht erzeugen</button>
+      <button onclick="copyReport()">Bericht kopieren</button>
+      <button onclick="downloadReport()">Als TXT herunterladen</button>
+      <button onclick="window.print()">Drucken / PDF</button>
+    </div>
+  </section>
+  <div id="out"></div>
+</main>
+<script>
+const STORAGE_KEY = "ki-kernel-szenarien-v8";
+const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+const arr = x => Array.isArray(x) ? x : [];
+const n = x => Number(x || 0);
+function esc(s){ return String(s||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;","\"":"&quot;"}[c])); }
+function text(s){ return String(s||"").replace(/<[^>]*>/g, ""); }
+function opt(){ const sel=document.getElementById("scenarioSelect"); sel.innerHTML = `<option value="">— Szenario wählen —</option>` + saved.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(""); if(saved[0]) sel.value=saved[0].id; }
+function byId(id){ return saved.find(x=>x.id===id); }
+function resourceScore(r){ return (r.direction === "low_good" ? 6 - n(r.current || 1) : n(r.current || 1)) * 20; }
+function resourceGap(r){ return r.direction === "low_good" ? n(r.current || 1) - n(r.target || 1) : n(r.target || 1) - n(r.current || 1); }
+function avg(list,key){ return list.length ? list.reduce((s,x)=>s+n(x[key]),0)/list.length : 0; }
+function strategyScore(s){ return n(s.acceptance)*3+n(s.control)*3+n(s.innovation)*2+n(s.speed)-n(s.risk)*3; }
+function compute(state){
+  const resources=arr(state.resources), personas=arr(state.personas), assumptions=arr(state.assumptions), interventions=arr(state.interventions), strategies=arr(state.strategies);
+  const res=resources.length ? resources.reduce((sum,x)=>sum+resourceScore(x),0)/resources.length : 60;
+  const risky=assumptions.filter(x=>x.evidence === "niedrig" || x.uncertainty === "hoch");
+  const hasGov=interventions.some(x=>/daten|datenschutz|dokumentation|governance|checkliste|mav/i.test(`${x.name} ${x.target}`));
+  const hasPart=interventions.some(x=>/beteilig|reflexion|jour fixe|rollenklärung|workshop|interview|steelman/i.test(`${x.name} ${x.target}`));
+  const acceptance=Math.round(Math.min(100,20+avg(personas,"trust")*8+avg(personas,"aiLiteracy")*3+avg(personas,"changeEnergy")*4+(hasPart?16:0)+res*.15-risky.length*4));
+  const governance=Math.round(Math.min(100,30+avg(personas,"riskSense")*5+(hasGov?22:0)+res*.18));
+  const learning=Math.round(Math.min(100,25+avg(personas,"aiLiteracy")*7+avg(personas,"changeEnergy")*5+interventions.length*5));
+  const risk=Math.round(Math.max(0,100-(acceptance*.35+governance*.4+learning*.15+res*.1)));
+  const best=[...strategies].sort((a,b)=>strategyScore(b)-strategyScore(a))[0];
+  return { acceptance, governance, learning, resources:Math.round(res), risk, risky, deficits:resources.filter(x=>resourceGap(x)>0), bestStrategy:best, score:acceptance+governance+learning+res-risk };
+}
+function selected(){ return byId(document.getElementById("scenarioSelect").value); }
+function val(id){ return document.getElementById(id).value; }
+function list(xs, prop="name"){ return arr(xs).map(x=>x[prop]||x.text||x.name).filter(Boolean); }
+function renderReport(){
+  const item=selected();
+  if(!item){ document.getElementById("out").innerHTML = `<section class="card bad"><b>Kein Szenario ausgewählt.</b></section>`; return; }
+  const mode=val("mode");
+  const html = mode === "briefing" ? briefing(item) : workReport(item);
+  document.getElementById("out").innerHTML = html;
+}
+function briefing(item){
+  const s=item.state, c=compute(s);
+  return `<section class="report" id="report">
+    <h2>Management-Briefing</h2>
+    <p><b>Szenario:</b> ${esc(s.context?.title || item.name)}</p>
+    <p><b>Adressat:</b> ${esc(val("audience"))}</p>
+    <p><b>Entscheidungsbedarf:</b> ${esc(val("decision") || s.context?.decisionQuestion || "nicht angegeben")}</p>
+    <h2>1. Kernaussage</h2>
+    <p>${esc(coreMessage(s,c))}</p>
+    <h2>2. Entscheidungspunkt</h2>
+    <p>${esc(s.context?.decisionQuestion || "Der konkrete Entscheidungspunkt sollte noch geschärft werden.")}</p>
+    <h2>3. Lagebild in fünf Kennzahlen</h2>
+    ${metricsTable(c)}
+    <h2>4. Größte Risiken</h2>
+    ${ul([...(c.deficits.slice(0,3).map(x=>`${x.name}: ${x.bottleneck || "Engpass ohne nähere Notiz"}`)), ...(c.risky.slice(0,3).map(x=>`Riskante Annahme: ${x.text}`))])}
+    <h2>5. Stärkster Hebel</h2>
+    <p>${esc(strongestLever(s,c))}</p>
+    <h2>6. Empfehlung</h2>
+    <p>${esc(c.bestStrategy ? `${c.bestStrategy.name}: ${c.bestStrategy.decisionSignal || c.bestStrategy.description}` : "Strategieempfehlung noch nicht belastbar.")}</p>
+    <h2>7. Nächste Schritte</h2>
+    ${ul(nextSteps(s,c).slice(0,5))}
+    <h2>8. Grenzen der Aussage</h2>
+    <p>Dieses Briefing ist eine heuristische Verdichtung auf Basis eingegebener Annahmen. Es ersetzt keine empirische Organisationsdiagnose, keine Rechtsberatung und keine personenbezogene Bewertung.</p>
+  </section>`;
+}
+function workReport(item){
+  const s=item.state, c=compute(s);
+  return `<section class="report" id="report">
+    <h2>Arbeitsreport</h2>
+    <p><b>Szenario:</b> ${esc(s.context?.title || item.name)}</p>
+    <p><b>Adressat:</b> ${esc(val("audience"))}</p>
+    <p><b>Bearbeiterhinweis:</b> ${esc(val("note") || "—")}</p>
+    <h2>1. Ausgangslage</h2>
+    <p><b>Domäne:</b> ${esc(s.context?.domain)}</p>
+    <p><b>Entscheidungsfrage:</b> ${esc(s.context?.decisionQuestion)}</p>
+    <p><b>Ziel:</b> ${esc(s.context?.goal)}</p>
+    <p><b>Grenzen:</b> ${esc(s.context?.boundaries)}</p>
+    <h2>2. Simulationsannahmen</h2>
+    ${assumptionTable(s.assumptions)}
+    <h2>3. Persona- und Stakeholderanalyse</h2>
+    ${personaTable(s.personas)}
+    <h2>4. Ressourcen- und Risikolage</h2>
+    ${metricsTable(c)}
+    ${resourceTable(s.resources)}
+    <h2>5. Kritische Engpässe</h2>
+    ${ul(c.deficits.map(x=>`${x.name}: ${x.bottleneck || "ohne Notiz"}`))}
+    <h2>6. Interventionsoptionen</h2>
+    ${interventionTable(s.interventions)}
+    <h2>7. Entscheidungsmatrix</h2>
+    ${strategyTable(s.strategies)}
+    <h2>8. Empfohlene Strategie</h2>
+    <p>${esc(c.bestStrategy ? `${c.bestStrategy.name}: ${c.bestStrategy.decisionSignal || c.bestStrategy.description}` : "Keine Strategie vorhanden.")}</p>
+    <h2>9. Maßnahmenplan</h2>
+    ${actionPlan(s,c)}
+    <h2>10. Offene Fragen</h2>
+    ${ul(arr(s.openQuestions))}
+    <h2>11. Datenschutz-/Governance-Hinweise</h2>
+    ${ul(governanceNotes(s,c))}
+    <h2>12. Was diese Simulation nicht aussagt</h2>
+    <p>Die Simulation ist keine empirische Organisationsdiagnose. Sie erzeugt plausible Hypothesen auf Basis der eingegebenen Daten. Ergebnisse müssen mit realen Beteiligten validiert werden. Keine Nutzung zur Bewertung realer Personen.</p>
+  </section>`;
+}
+function coreMessage(s,c){
+  if(c.risk>45) return "Das Szenario ist risikobehaftet. Vor Umsetzung sollten Annahmen, Ressourcenengpässe und Governance-Fragen geklärt werden.";
+  if(c.acceptance>=70 && c.governance>=70) return "Das Szenario wirkt grundsätzlich tragfähig, wenn die identifizierten Engpässe aktiv bearbeitet werden.";
+  if(c.governance<60) return "Die fachliche oder soziale Tragfähigkeit ist ohne stärkere Governance- und Klärungsstruktur begrenzt.";
+  if(c.acceptance<60) return "Die größte Schwachstelle liegt in Akzeptanz, Vertrauen oder Beteiligung. Der Prozess sollte stärker kommunikativ und partizipativ abgesichert werden.";
+  return "Das Szenario ist bearbeitbar, aber die Entscheidung sollte an konkreten Engpässen, Annahmen und Nebenwirkungen ausgerichtet werden.";
+}
+function strongestLever(s,c){
+  const firstDef=c.deficits[0];
+  if(firstDef) return `Zentraler Hebel ist die Ressource „${firstDef.name}“: ${firstDef.bottleneck || "Engpass klären"}.`;
+  const firstInter=arr(s.interventions)[0];
+  if(firstInter) return `Naheliegender Hebel ist die Intervention „${firstInter.name}“ mit Ziel „${firstInter.target}“.`;
+  return "Der stärkste Hebel sollte über eine Nachschärfung der Ressourcen und Interventionen bestimmt werden.";
+}
+function nextSteps(s,c){
+  const steps=[];
+  if(c.risky.length) steps.push("Riskante Annahmen mit Auftraggeber oder Beteiligten validieren.");
+  if(c.deficits.length) steps.push(`Ressourcenengpass bearbeiten: ${c.deficits[0].name}.`);
+  if(c.bestStrategy) steps.push(`Strategieentscheidung vorbereiten: ${c.bestStrategy.name}.`);
+  arr(s.interventions).slice(0,2).forEach(x=>steps.push(`Intervention konkretisieren: ${x.name}.`));
+  steps.push("Ergebnisse nicht personenbezogen verwenden und Grenzen der Simulation transparent machen.");
+  return steps;
+}
+function governanceNotes(s,c){
+  const notes=["Keine echten Personenprofile verwenden.","Annahmen als Hypothesen markieren und validieren.","Sensible oder personenbezogene Daten vermeiden oder anonymisieren."];
+  if(c.risky.length) notes.push("Hohe Unsicherheit in Annahmen vor Entscheidungen prüfen.");
+  if(JSON.stringify(s).toLowerCase().includes("datenschutz")) notes.push("Datenschutzfragen vor Umsetzung fachlich klären.");
+  return notes;
+}
+function metricsTable(c){ return `<table><tbody><tr><th>Akzeptanz</th><td>${c.acceptance}</td></tr><tr><th>Governance</th><td>${c.governance}</td></tr><tr><th>Ressourcen</th><td>${c.resources}</td></tr><tr><th>Lernfähigkeit</th><td>${c.learning}</td></tr><tr><th>Restrisiko</th><td>${c.risk}</td></tr></tbody></table>`; }
+function assumptionTable(xs){ if(!arr(xs).length) return "<p>Keine Annahmen hinterlegt.</p>"; return `<table><thead><tr><th>Annahme</th><th>Evidenz</th><th>Unsicherheit</th><th>Sensibilität</th><th>Status</th></tr></thead><tbody>${arr(xs).map(x=>`<tr><td>${esc(x.text)}</td><td>${esc(x.evidence)}</td><td>${esc(x.uncertainty)}</td><td>${esc(x.sensitivity)}</td><td>${esc(x.sourceStatus)}</td></tr>`).join("")}</tbody></table>`; }
+function personaTable(xs){ if(!arr(xs).length) return "<p>Keine Personas hinterlegt.</p>"; return `<table><thead><tr><th>Name</th><th>Rolle</th><th>Haltung</th><th>Einfluss</th><th>Vertrauen</th><th>Risiko</th><th>Kommunikation</th></tr></thead><tbody>${arr(xs).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.role)}</td><td>${esc(x.stance)}</td><td>${esc(x.influence)}</td><td>${esc(x.trust)}</td><td>${esc(x.riskSense)}</td><td>${esc(x.communicationNeed)}</td></tr>`).join("")}</tbody></table>`; }
+function resourceTable(xs){ if(!arr(xs).length) return "<p>Keine Ressourcen hinterlegt.</p>"; return `<table><thead><tr><th>Ressource</th><th>Typ</th><th>Ist</th><th>Ziel</th><th>Trend</th><th>Engpass</th></tr></thead><tbody>${arr(xs).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.type)}</td><td>${esc(x.current)}</td><td>${esc(x.target)}</td><td>${esc(x.trend)}</td><td>${esc(x.bottleneck)}</td></tr>`).join("")}</tbody></table>`; }
+function interventionTable(xs){ if(!arr(xs).length) return "<p>Keine Interventionen hinterlegt.</p>"; return `<table><thead><tr><th>Intervention</th><th>Zeitpunkt</th><th>Ziel</th><th>Nutzen</th><th>Nebenwirkung</th><th>Aufwand</th></tr></thead><tbody>${arr(xs).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.timing)}</td><td>${esc(x.target)}</td><td>${esc(x.benefit)}</td><td>${esc(x.sideEffect)}</td><td>${esc(x.effort)}</td></tr>`).join("")}</tbody></table>`; }
+function strategyTable(xs){ if(!arr(xs).length) return "<p>Keine Strategien hinterlegt.</p>"; return `<table><thead><tr><th>Strategie</th><th>Tempo</th><th>Akzeptanz</th><th>Kontrolle</th><th>Innovation</th><th>Risiko</th><th>Signal</th></tr></thead><tbody>${arr(xs).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.speed)}</td><td>${esc(x.acceptance)}</td><td>${esc(x.control)}</td><td>${esc(x.innovation)}</td><td>${esc(x.risk)}</td><td>${esc(x.decisionSignal)}</td></tr>`).join("")}</tbody></table>`; }
+function actionPlan(s,c){ const items=[]; if(c.deficits[0]) items.push([`Ressource ${c.deficits[0].name} stabilisieren`, c.deficits[0].bottleneck || "Engpass klären", "Projekt-/Prozessverantwortung", "kurzfristig", "Ressourcenwert verbessert"]); arr(s.interventions).slice(0,3).forEach(x=>items.push([x.name, x.target, "zu klären", x.timing, x.benefit])); if(!items.length) return "<p>Maßnahmenplan muss ergänzt werden.</p>"; return `<table><thead><tr><th>Maßnahme</th><th>Ziel</th><th>Verantwortung</th><th>Zeitpunkt</th><th>Erfolgskriterium</th></tr></thead><tbody>${items.map(x=>`<tr>${x.map(y=>`<td>${esc(y)}</td>`).join("")}</tr>`).join("")}</tbody></table>`; }
+function ul(xs){ xs=arr(xs).filter(Boolean); return xs.length ? `<ul>${xs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>` : "<p>Keine Einträge.</p>"; }
+function reportText(){ const el=document.getElementById("report"); return el ? el.innerText : ""; }
+function copyReport(){ navigator.clipboard?.writeText(reportText()); }
+function downloadReport(){ const blob=new Blob([reportText()],{type:"text/plain;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="bericht-plus.txt"; a.click(); URL.revokeObjectURL(a.href); }
+opt();
+if(saved[0]) renderReport();
+</script>
+</body>
+</html>
