@@ -80,14 +80,33 @@ function maskDatabaseUrl(url) {
 }
 
 async function checkDatabase() {
-  if (!DATABASE_URL) return { reachable: false, note: "DATABASE_URL ist nicht gesetzt." };
+  if (STORAGE_MODE === "local") {
+    return {
+      reachable: null,
+      active: false,
+      note: "Datenbankprüfung übersprungen, weil STORAGE_MODE=local. Die App nutzt weiterhin Browser-LocalStorage als Hauptspeicher."
+    };
+  }
+  if (!DATABASE_URL) {
+    return {
+      reachable: false,
+      active: false,
+      note: "DATABASE_URL ist nicht gesetzt. Für STORAGE_MODE=hybrid oder db ist eine Datenbank erforderlich."
+    };
+  }
   const client = await getPrisma();
-  if (!client) return { reachable: false, note: `Prisma konnte nicht initialisiert werden: ${String(prismaInitError?.message || prismaInitError || "unbekannter Fehler").slice(0, 500)}` };
+  if (!client) {
+    return {
+      reachable: false,
+      active: true,
+      note: `Prisma konnte nicht initialisiert werden: ${String(prismaInitError?.message || prismaInitError || "unbekannter Fehler").slice(0, 500)}`
+    };
+  }
   try {
     await client.$queryRaw`SELECT 1`;
-    return { reachable: true, note: "Datenbankverbindung erfolgreich." };
+    return { reachable: true, active: true, note: "Datenbankverbindung erfolgreich." };
   } catch (error) {
-    return { reachable: false, note: String(error?.message || error).slice(0, 500) };
+    return { reachable: false, active: true, note: String(error?.message || error).slice(0, 500) };
   }
 }
 
@@ -95,10 +114,11 @@ app.get("/api/health", async (_req, res) => {
   const db = await checkDatabase();
   res.json({
     ok: true,
-    appVersion: "1.8-prisma-connected-safe",
+    appVersion: "1.8-local-safe-db-prepared",
     model: OPENAI_MODEL,
     openaiConfigured: Boolean(OPENAI_API_KEY),
     databaseConfigured: Boolean(DATABASE_URL),
+    databaseActive: db.active,
     databaseReachable: db.reachable,
     databaseReachableNote: db.note,
     databaseUrlPreview: maskDatabaseUrl(DATABASE_URL),
@@ -225,8 +245,7 @@ app.use(express.static(path.join(__dirname, "dist")));
 app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "dist", "index.html")));
 
 async function shutdown() {
-  const client = prisma || await getPrisma();
-  if (client) await client.$disconnect();
+  if (prisma) await prisma.$disconnect();
   process.exit(0);
 }
 process.on("SIGINT", shutdown);
