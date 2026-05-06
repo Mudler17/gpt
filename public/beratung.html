@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beratung · KI-Kernel GPT</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
+    body { margin:0; background:#f1f5f9; line-height:1.55; }
+    header { background:#020617; color:white; padding:42px 24px; }
+    main { max-width:1240px; margin:0 auto; padding:24px; }
+    .hero { max-width:1240px; margin:0 auto; }
+    h1 { font-size: clamp(30px, 5vw, 52px); margin:12px 0; line-height:1.05; }
+    h2 { margin:0 0 12px; font-size:22px; }
+    h3 { margin:18px 0 8px; font-size:18px; }
+    .badge { display:inline-block; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 12px; color:#cbd5e1; font-size:14px; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:22px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,.05); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
+    label { display:block; font-weight:750; font-size:14px; color:#334155; margin-bottom:6px; }
+    select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font:inherit; background:white; }
+    textarea { min-height:90px; }
+    button, .btn { appearance:none; border:1px solid #cbd5e1; border-radius:14px; padding:10px 14px; background:white; color:#0f172a; font-weight:800; cursor:pointer; text-decoration:none; display:inline-block; }
+    .primary { background:#020617; color:white; border-color:#020617; }
+    .muted { color:#64748b; font-size:14px; }
+    .pill { display:inline-block; border-radius:999px; background:#f8fafc; border:1px solid #e2e8f0; padding:5px 10px; margin:2px; font-size:12px; font-weight:750; }
+    .ok { background:#ecfdf5; border-color:#bbf7d0; }
+    .warn { background:#fffbeb; border-color:#fde68a; }
+    .bad { background:#fff1f2; border-color:#fecdd3; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { border-bottom:1px solid #e2e8f0; padding:10px; text-align:left; vertical-align:top; }
+    th { background:#f8fafc; }
+    pre { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:18px; padding:18px; overflow:auto; }
+    .item { border:1px solid #e2e8f0; border-radius:18px; padding:14px; background:#f8fafc; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="badge">Option A · Persönliches Beratungswerkzeug</span>
+    <h1>Persönlicher Beratungsmodus</h1>
+    <p>Diese Seite macht aus einem gespeicherten Szenario eine persönliche Fallakte: Auftrag, Arbeitsstand, Beratungsnotizen, To-dos, Reflexion, nächster Schritt und Arbeitsjournal.</p>
+    <p><a class="btn" href="/">Zurück zur App</a> <a class="btn" href="/bericht-plus.html">Bericht+</a> <a class="btn" href="/vergleich-plus.html">Vergleich+</a></p>
+  </div>
+</header>
+<main>
+  <section class="card warn">
+    <h2>Arbeitsprinzip</h2>
+    <p>Dieser Modus ist nicht für Teamfreigaben, Mandantenfähigkeit oder Enterprise-Nutzung gedacht. Er ist dein persönlicher Beratungsarbeitsplatz. Alles wird lokal im Browser gespeichert.</p>
+  </section>
+
+  <section class="card">
+    <h2>Fallakte anlegen oder laden</h2>
+    <div class="grid">
+      <div><label>Gespeichertes Szenario</label><select id="scenarioSelect"></select></div>
+      <div><label>Beratungsfall laden</label><select id="caseSelect"></select></div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="primary" onclick="createCaseFromScenario()">Fallakte aus Szenario anlegen</button>
+      <button onclick="loadCase()">Fallakte laden</button>
+      <button onclick="saveCase()">Fallakte speichern</button>
+      <button onclick="deleteCase()">Fallakte löschen</button>
+      <button onclick="copyDossier()">Dossier kopieren</button>
+      <button onclick="downloadDossier()">Als TXT herunterladen</button>
+    </div>
+    <div id="status" class="muted" style="margin-top:12px;">Bereit.</div>
+  </section>
+
+  <div id="workspace" style="display:none;">
+    <section class="card">
+      <h2>Beratungsfall</h2>
+      <div class="grid">
+        <div><label>Titel</label><input id="caseTitle"></div>
+        <div><label>Status</label><select id="caseStatus"><option>Idee</option><option>Vorbereitung</option><option>in Bearbeitung</option><option>wartet auf Rückmeldung</option><option>entscheidungsreif</option><option>abgeschlossen</option></select></div>
+        <div><label>Priorität</label><select id="priority"><option>niedrig</option><option>mittel</option><option>hoch</option><option>kritisch</option></select></div>
+        <div><label>Nächster Termin / Zeitpunkt</label><input id="nextDate" placeholder="z. B. nächste Woche, 12.06., Workshoptermin"></div>
+      </div>
+      <div class="grid" style="margin-top:16px;">
+        <div><label>Auftrag / Anlass</label><textarea id="mandate"></textarea></div>
+        <div><label>Entscheidungsbedarf</label><textarea id="decisionNeed"></textarea></div>
+        <div><label>Erwartetes Ergebnis</label><textarea id="deliverable"></textarea></div>
+        <div><label>Nicht-Zwecke / Grenzen</label><textarea id="boundaries"></textarea></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Beratungsnotizen</h2>
+        <textarea id="consultingNotes" placeholder="Hypothesen, Beobachtungen, Einordnungen, Gesprächsnotizen ..."></textarea>
+      </div>
+      <div class="card">
+        <h2>Reflexion</h2>
+        <textarea id="reflection" placeholder="Was ist unklar? Wo bin ich voreingenommen? Welche Gegenhypothese sollte geprüft werden?"></textarea>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>To-dos</h2>
+        <div class="grid">
+          <input id="todoText" placeholder="Neue Aufgabe">
+          <select id="todoType"><option>prüfen</option><option>klären</option><option>vorbereiten</option><option>kommunizieren</option><option>entscheiden</option></select>
+        </div>
+        <div style="margin-top:12px;"><button onclick="addTodo()">To-do hinzufügen</button></div>
+        <div id="todoList" style="margin-top:14px;"></div>
+      </div>
+      <div class="card">
+        <h2>Nächster sinnvoller Schritt</h2>
+        <div id="nextStep" class="item"></div>
+        <button onclick="suggestNextStep()">Nächsten Schritt vorschlagen</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Arbeitsjournal</h2>
+      <div class="grid">
+        <textarea id="journalText" placeholder="Kurzer Journaleintrag: Was wurde heute geklärt, verändert oder entschieden?"></textarea>
+        <div>
+          <label>Kategorie</label><select id="journalType"><option>Notiz</option><option>Entscheidung</option><option>Risiko</option><option>Kontakt</option><option>Erkenntnis</option><option>offene Frage</option></select>
+          <div style="margin-top:12px;"><button onclick="addJournal()">Journaleintrag hinzufügen</button></div>
+        </div>
+      </div>
+      <div id="journalList" style="margin-top:14px;"></div>
+    </section>
+
+    <section class="card">
+      <h2>Persönliches Beratungsdossier</h2>
+      <pre id="dossier"></pre>
+    </section>
+  </div>
+</main>
+<script>
+const SCENARIO_KEY = "ki-kernel-szenarien-v8";
+const CASE_KEY = "ki-kernel-personal-consulting-cases-v1";
+const scenarios = JSON.parse(localStorage.getItem(SCENARIO_KEY) || "[]");
+let cases = JSON.parse(localStorage.getItem(CASE_KEY) || "[]");
+let current = null;
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function esc(s){ return String(s||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;","\"":"&quot;"}[c])); }
+function status(msg, cls="muted"){ const el=document.getElementById("status"); el.className=cls; el.textContent=msg; }
+function opt(){
+  document.getElementById("scenarioSelect").innerHTML = `<option value="">— Szenario wählen —</option>` + scenarios.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  renderCaseOptions();
+  if(scenarios[0]) document.getElementById("scenarioSelect").value=scenarios[0].id;
+}
+function renderCaseOptions(){
+  document.getElementById("caseSelect").innerHTML = `<option value="">— Fallakte wählen —</option>` + cases.map(x=>`<option value="${x.id}">${esc(x.title)} · ${esc(x.status)}</option>`).join("");
+}
+function scenarioById(id){ return scenarios.find(x=>x.id===id); }
+function caseById(id){ return cases.find(x=>x.id===id); }
+function createCaseFromScenario(){
+  const item=scenarioById(document.getElementById("scenarioSelect").value);
+  if(!item){ status("Bitte zuerst ein Szenario auswählen.","bad"); return; }
+  const s=item.state || {};
+  current = {
+    id: uid(),
+    scenarioId: item.id,
+    title: `Beratung · ${s.context?.title || item.name}`,
+    status: "Vorbereitung",
+    priority: "mittel",
+    nextDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    mandate: s.context?.decisionQuestion || "Auftrag klären.",
+    decisionNeed: "Welche Entscheidung oder Klärung soll vorbereitet werden?",
+    deliverable: "Beratungsnotiz, Management-Briefing, Workshopdesign oder Maßnahmenplan.",
+    boundaries: s.context?.boundaries || "Keine personenbezogene Bewertung. Nur Rollen und anonymisierte Szenarien verwenden.",
+    consultingNotes: initialNotes(s),
+    reflection: "Gegenhypothese prüfen: Welche Annahme könnte falsch sein? Welche Perspektive fehlt?",
+    todos: initialTodos(s),
+    journal: [{id:uid(), date:new Date().toISOString(), type:"Notiz", text:"Fallakte aus Szenario angelegt."}],
+    scenario: item
+  };
+  fill(); saveCase(false); status("Fallakte angelegt und gespeichert.","ok");
+}
+function initialNotes(s){
+  const risks=(s.assumptions||[]).filter(a=>a.uncertainty==="hoch"||a.evidence==="niedrig").map(a=>`Riskante Annahme: ${a.text}`).join("\n");
+  const resources=(s.resources||[]).map(r=>`Ressource ${r.name}: Ist ${r.current}, Ziel ${r.target}, Engpass: ${r.bottleneck||"—"}`).join("\n");
+  return [risks, resources].filter(Boolean).join("\n\n") || "Erste Beratungsnotizen ergänzen.";
+}
+function initialTodos(s){
+  const todos=[];
+  if((s.assumptions||[]).length) todos.push({id:uid(), done:false, type:"prüfen", text:"Zentrale Annahmen validieren."});
+  if((s.resources||[]).length) todos.push({id:uid(), done:false, type:"klären", text:"Wichtigsten Ressourcenengpass priorisieren."});
+  if((s.interventions||[]).length) todos.push({id:uid(), done:false, type:"vorbereiten", text:"Interventionen in konkrete nächste Schritte übersetzen."});
+  todos.push({id:uid(), done:false, type:"kommunizieren", text:"Grenzen der Simulation transparent machen."});
+  return todos;
+}
+function loadCase(){ const c=caseById(document.getElementById("caseSelect").value); if(!c){ status("Bitte Fallakte auswählen.","bad"); return;} current=JSON.parse(JSON.stringify(c)); fill(); status("Fallakte geladen.","ok"); }
+function read(){
+  if(!current) return null;
+  return {...current, title:v("caseTitle"), status:v("caseStatus"), priority:v("priority"), nextDate:v("nextDate"), mandate:v("mandate"), decisionNeed:v("decisionNeed"), deliverable:v("deliverable"), boundaries:v("boundaries"), consultingNotes:v("consultingNotes"), reflection:v("reflection"), updatedAt:new Date().toISOString()};
+}
+function fill(){
+  document.getElementById("workspace").style.display="block";
+  set("caseTitle",current.title); set("caseStatus",current.status); set("priority",current.priority); set("nextDate",current.nextDate); set("mandate",current.mandate); set("decisionNeed",current.decisionNeed); set("deliverable",current.deliverable); set("boundaries",current.boundaries); set("consultingNotes",current.consultingNotes); set("reflection",current.reflection);
+  renderTodos(); renderJournal(); suggestNextStep(); renderDossier();
+}
+function set(id,val){ document.getElementById(id).value=val||""; }
+function v(id){ return document.getElementById(id).value; }
+function saveCase(show=true){
+  current=read() || current;
+  const idx=cases.findIndex(x=>x.id===current.id);
+  if(idx>=0) cases[idx]=current; else cases.unshift(current);
+  localStorage.setItem(CASE_KEY, JSON.stringify(cases));
+  renderCaseOptions(); document.getElementById("caseSelect").value=current.id;
+  renderDossier(); if(show) status("Fallakte gespeichert.","ok");
+}
+function deleteCase(){ const id=document.getElementById("caseSelect").value || current?.id; if(!id) return; cases=cases.filter(x=>x.id!==id); localStorage.setItem(CASE_KEY,JSON.stringify(cases)); current=null; renderCaseOptions(); document.getElementById("workspace").style.display="none"; status("Fallakte gelöscht.","ok"); }
+function addTodo(){ if(!current) return; const text=v("todoText").trim(); if(!text) return; current.todos.unshift({id:uid(), done:false, type:v("todoType"), text}); set("todoText",""); renderTodos(); saveCase(false); }
+function toggleTodo(id){ const t=current.todos.find(x=>x.id===id); if(t) t.done=!t.done; renderTodos(); saveCase(false); }
+function delTodo(id){ current.todos=current.todos.filter(x=>x.id!==id); renderTodos(); saveCase(false); }
+function renderTodos(){ document.getElementById("todoList").innerHTML=(current.todos||[]).map(t=>`<div class="item"><label><input type="checkbox" ${t.done?"checked":""} onchange="toggleTodo('${t.id}')" style="width:auto;"> <b>${esc(t.type)}</b> · ${esc(t.text)}</label><button onclick="delTodo('${t.id}')">löschen</button></div>`).join("") || "<p class='muted'>Keine To-dos.</p>"; }
+function addJournal(){ if(!current) return; const text=v("journalText").trim(); if(!text) return; current.journal.unshift({id:uid(), date:new Date().toISOString(), type:v("journalType"), text}); set("journalText",""); renderJournal(); saveCase(false); }
+function delJournal(id){ current.journal=current.journal.filter(x=>x.id!==id); renderJournal(); saveCase(false); }
+function renderJournal(){ document.getElementById("journalList").innerHTML=(current.journal||[]).map(j=>`<div class="item"><b>${esc(j.type)}</b> · <span class="muted">${new Date(j.date).toLocaleString()}</span><p>${esc(j.text)}</p><button onclick="delJournal('${j.id}')">löschen</button></div>`).join("") || "<p class='muted'>Noch kein Journal.</p>"; }
+function suggestNextStep(){
+  if(!current) return;
+  const open=(current.todos||[]).filter(t=>!t.done);
+  let suggestion="Fallakte prüfen und nächsten konkreten Beratungsschritt festlegen.";
+  if(open.length) suggestion=`Nächstes offenes To-do bearbeiten: ${open[0].text}`;
+  if(current.status==="Idee") suggestion="Auftrag und Entscheidungsbedarf schärfen.";
+  if(current.status==="Vorbereitung") suggestion="Annahmen, Ressourcenengpass und erwartetes Ergebnis validieren.";
+  if(current.status==="entscheidungsreif") suggestion="Management-Briefing erzeugen und Entscheidungspunkt präzisieren.";
+  document.getElementById("nextStep").innerHTML=`<b>${esc(suggestion)}</b><p class="muted">Status: ${esc(current.status)} · Priorität: ${esc(current.priority)}</p>`;
+  renderDossier();
+}
+function renderDossier(){ if(!current) return; current=read() || current; document.getElementById("dossier").textContent=makeDossier(); }
+function makeDossier(){
+  const s=current.scenario?.state || {};
+  return `Persönliches Beratungsdossier\n\nTitel:\n${current.title}\n\nStatus:\n${current.status}\n\nPriorität:\n${current.priority}\n\nNächster Zeitpunkt:\n${current.nextDate||"—"}\n\nSzenario:\n${s.context?.title || current.scenario?.name || "—"}\n\nAuftrag / Anlass:\n${current.mandate}\n\nEntscheidungsbedarf:\n${current.decisionNeed}\n\nErwartetes Ergebnis:\n${current.deliverable}\n\nGrenzen:\n${current.boundaries}\n\nBeratungsnotizen:\n${current.consultingNotes}\n\nReflexion:\n${current.reflection}\n\nOffene To-dos:\n${(current.todos||[]).filter(t=>!t.done).map(t=>`- [${t.type}] ${t.text}`).join("\n") || "keine"}\n\nErledigte To-dos:\n${(current.todos||[]).filter(t=>t.done).map(t=>`- [${t.type}] ${t.text}`).join("\n") || "keine"}\n\nJournal:\n${(current.journal||[]).map(j=>`- ${new Date(j.date).toLocaleString()} · ${j.type}: ${j.text}`).join("\n") || "keine Einträge"}\n\nPrüfhinweis:\nDiese Fallakte ist ein persönliches Arbeitsinstrument. Sie ersetzt keine formale Dokumentation, keine Rechtsberatung und keine personenbezogene Bewertung.`;
+}
+function copyDossier(){ renderDossier(); navigator.clipboard?.writeText(document.getElementById("dossier").textContent); status("Dossier kopiert.","ok"); }
+function downloadDossier(){ renderDossier(); const blob=new Blob([document.getElementById("dossier").textContent],{type:"text/plain;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="beratungsdossier.txt"; a.click(); URL.revokeObjectURL(a.href); }
+["caseTitle","caseStatus","priority","nextDate","mandate","decisionNeed","deliverable","boundaries","consultingNotes","reflection"].forEach(id=>document.addEventListener("input",e=>{ if(e.target?.id===id && current) renderDossier(); }));
+opt();
+</script>
+</body>
+</html>
