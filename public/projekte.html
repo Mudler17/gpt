@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Projektakte · KI-Kernel GPT 1.6</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
+    body { margin:0; background:#f1f5f9; line-height:1.55; }
+    header { background:#020617; color:white; padding:42px 24px; }
+    main { max-width:1240px; margin:0 auto; padding:24px; }
+    .hero { max-width:1240px; margin:0 auto; }
+    h1 { font-size:clamp(30px,5vw,52px); line-height:1.05; margin:12px 0; }
+    h2 { font-size:24px; margin:0 0 12px; }
+    h3 { font-size:18px; margin:18px 0 8px; }
+    .badge { display:inline-block; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 12px; color:#cbd5e1; font-size:14px; }
+    .btn, button { appearance:none; border:1px solid #cbd5e1; border-radius:14px; padding:10px 14px; background:white; color:#0f172a; font-weight:900; cursor:pointer; text-decoration:none; display:inline-block; }
+    .primary { background:#020617; color:white; border-color:#020617; }
+    .dangerBtn { background:#be123c; color:white; border-color:#be123c; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:22px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,.05); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+    label { display:block; font-weight:800; font-size:14px; color:#334155; margin-bottom:6px; }
+    select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font:inherit; background:white; }
+    textarea { min-height:110px; }
+    .muted { color:#64748b; font-size:14px; }
+    .pill { display:inline-block; border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc; padding:5px 10px; margin:2px; font-size:12px; font-weight:800; }
+    .ok { background:#ecfdf5; border-color:#bbf7d0; }
+    .warn { background:#fffbeb; border-color:#fde68a; }
+    .bad { background:#fff1f2; border-color:#fecdd3; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { border-bottom:1px solid #e2e8f0; padding:10px; text-align:left; vertical-align:top; }
+    th { background:#f8fafc; }
+    pre { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:18px; padding:18px; overflow:auto; max-height:520px; }
+    .scenarioBox { display:flex; gap:10px; align-items:flex-start; justify-content:space-between; border:1px solid #e2e8f0; border-radius:16px; padding:12px; background:#f8fafc; margin-bottom:8px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="badge">KI-Kernel GPT 1.6 · Projektakte</span>
+    <h1>Projektakte</h1>
+    <p>Ordne Szenarien, Notizen, Entscheidungsbedarf und nächste Schritte einem Projekt zu. Die Projektakte ist die fachliche Klammer vor der späteren Datenbankmigration.</p>
+    <p><a class="btn" href="/">Zur App</a> <a class="btn" href="/backup.html">Backup 1.5</a> <a class="btn" href="/hilfe.html">Hilfe</a></p>
+  </div>
+</header>
+<main>
+  <section class="card warn">
+    <h2>Warum Projekte?</h2>
+    <p>Ein Projekt bündelt mehrere Szenarien und Arbeitsergebnisse. Beispiel: „KI-Einführung Bereich X“ enthält mehrere Varianten, Phasenmodelle, Beziehungsmodelle, Berichte und Beratungsnotizen.</p>
+  </section>
+
+  <section class="card">
+    <h2>Projekt laden oder anlegen</h2>
+    <div class="grid">
+      <div><label>Projekt laden</label><select id="projectSelect"></select></div>
+      <div><label>Neuer Projekttitel</label><input id="newTitle" placeholder="z. B. KI-Einführung Bereich X" /></div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="primary" onclick="createProject()">Projekt anlegen</button>
+      <button onclick="loadProject()">Projekt laden</button>
+      <button onclick="saveProject()">Projekt speichern</button>
+      <button onclick="duplicateProject()">Duplizieren</button>
+      <button class="dangerBtn" onclick="deleteProject()">Projekt löschen</button>
+    </div>
+    <div id="status" class="muted" style="margin-top:12px;">Bereit.</div>
+  </section>
+
+  <div id="workspace" style="display:none;">
+    <section class="card">
+      <h2>Stammdaten</h2>
+      <div class="grid">
+        <div><label>Titel</label><input id="title" /></div>
+        <div><label>Status</label><select id="statusField"><option>Idee</option><option>Vorbereitung</option><option>in Bearbeitung</option><option>wartet auf Rückmeldung</option><option>entscheidungsreif</option><option>abgeschlossen</option><option>archiviert</option></select></div>
+        <div><label>Priorität</label><select id="priority"><option>niedrig</option><option>mittel</option><option>hoch</option><option>kritisch</option></select></div>
+        <div><label>Tags, kommagetrennt</label><input id="tags" placeholder="KI, Governance, Workshop" /></div>
+      </div>
+      <div class="grid" style="margin-top:16px;">
+        <div><label>Beschreibung</label><textarea id="description"></textarea></div>
+        <div><label>Entscheidungsbedarf</label><textarea id="decisionNeed"></textarea></div>
+        <div><label>Nächster Schritt</label><textarea id="nextStep"></textarea></div>
+        <div><label>Projektgrenzen / Nicht-Zwecke</label><textarea id="boundaries"></textarea></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Szenarien zuordnen</h2>
+        <p class="muted">Wähle gespeicherte Szenarien aus der Haupt-App und ordne sie der Projektakte zu.</p>
+        <div><label>Gespeichertes Szenario</label><select id="scenarioSelect"></select></div>
+        <div style="margin-top:12px;"><button onclick="addScenarioToProject()">Szenario zuordnen</button></div>
+        <div id="assignedScenarios" style="margin-top:16px;"></div>
+      </div>
+      <div class="card">
+        <h2>Projektnotizen</h2>
+        <textarea id="notes" placeholder="Arbeitsnotizen, offene Punkte, Kontext, Gesprächsnotizen ..."></textarea>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>To-dos</h2>
+        <div class="grid">
+          <input id="todoText" placeholder="Neue Aufgabe" />
+          <select id="todoType"><option>prüfen</option><option>klären</option><option>vorbereiten</option><option>kommunizieren</option><option>entscheiden</option><option>dokumentieren</option></select>
+        </div>
+        <div style="margin-top:12px;"><button onclick="addTodo()">To-do hinzufügen</button></div>
+        <div id="todoList" style="margin-top:14px;"></div>
+      </div>
+      <div class="card">
+        <h2>Projektprüfung</h2>
+        <button class="primary" onclick="renderProjectCheck()">Projekt prüfen</button>
+        <div id="projectCheck" style="margin-top:14px;"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Projekt-Dossier</h2>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <button onclick="copyDossier()">Dossier kopieren</button>
+        <button onclick="downloadDossier()">Dossier TXT</button>
+        <button onclick="downloadProjectJson()">Projekt JSON</button>
+      </div>
+      <pre id="dossier"></pre>
+    </section>
+  </div>
+</main>
+<script>
+const PROJECT_KEY = 'ki-kernel-projects-v1';
+const SCENARIO_KEY = 'ki-kernel-szenarien-v8';
+let projects = parse(PROJECT_KEY);
+let scenarios = parse(SCENARIO_KEY);
+let current = null;
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function now(){ return new Date().toISOString(); }
+function parse(key){ try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } }
+function saveProjects(){ localStorage.setItem(PROJECT_KEY, JSON.stringify(projects)); renderProjectOptions(); }
+function escapeHtml(s){ return String(s||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
+function status(msg, cls='muted'){ const el=document.getElementById('status'); el.className=cls; el.textContent=msg; }
+function renderProjectOptions(){ document.getElementById('projectSelect').innerHTML='<option value="">— Projekt wählen —</option>'+projects.map(p=>`<option value="${p.id}">${escapeHtml(p.title)} · ${escapeHtml(p.status||'')}</option>`).join(''); }
+function renderScenarioOptions(){ scenarios=parse(SCENARIO_KEY); document.getElementById('scenarioSelect').innerHTML='<option value="">— Szenario wählen —</option>'+scenarios.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join(''); }
+function createProject(){ const title=document.getElementById('newTitle').value.trim(); if(!title) return status('Bitte Projekttitel eintragen.','bad'); current={ id:uid(), title, description:'', status:'Vorbereitung', priority:'mittel', tags:[], createdAt:now(), updatedAt:now(), scenarioIds:[], notes:'', decisionNeed:'', nextStep:'', boundaries:'Keine personenbezogenen Profile. Nur Rollen, Archetypen und anonymisierte Szenarien verwenden.', todos:[{id:uid(),done:false,type:'klären',text:'Projektauftrag und Entscheidungsbedarf schärfen.'}] }; projects.unshift(current); saveProjects(); document.getElementById('projectSelect').value=current.id; fill(); status('Projekt angelegt.','ok'); }
+function loadProject(){ const id=document.getElementById('projectSelect').value; const p=projects.find(x=>x.id===id); if(!p) return status('Bitte Projekt auswählen.','bad'); current=JSON.parse(JSON.stringify(p)); fill(); status('Projekt geladen.','ok'); }
+function read(){ if(!current) return null; return {...current, title:val('title'), status:val('statusField'), priority:val('priority'), tags:val('tags').split(',').map(x=>x.trim()).filter(Boolean), description:val('description'), decisionNeed:val('decisionNeed'), nextStep:val('nextStep'), boundaries:val('boundaries'), notes:val('notes'), updatedAt:now()}; }
+function fill(){ document.getElementById('workspace').style.display='block'; set('title',current.title); set('statusField',current.status||'Vorbereitung'); set('priority',current.priority||'mittel'); set('tags',(current.tags||[]).join(', ')); set('description',current.description); set('decisionNeed',current.decisionNeed); set('nextStep',current.nextStep); set('boundaries',current.boundaries); set('notes',current.notes); renderScenarioOptions(); renderAssigned(); renderTodos(); renderDossier(); }
+function saveProject(show=true){ current=read() || current; const idx=projects.findIndex(x=>x.id===current.id); if(idx>=0) projects[idx]=current; else projects.unshift(current); saveProjects(); document.getElementById('projectSelect').value=current.id; renderDossier(); if(show) status('Projekt gespeichert.','ok'); }
+function duplicateProject(){ if(!current) return status('Kein Projekt geladen.','bad'); const copy=read(); copy.id=uid(); copy.title=copy.title+' · Kopie'; copy.createdAt=now(); copy.updatedAt=now(); projects.unshift(copy); saveProjects(); current=copy; fill(); status('Projekt dupliziert.','ok'); }
+function deleteProject(){ if(!current) return status('Kein Projekt geladen.','bad'); if(!confirm('Projekt wirklich löschen? Zugeordnete Szenarien bleiben erhalten.')) return; projects=projects.filter(p=>p.id!==current.id); saveProjects(); current=null; document.getElementById('workspace').style.display='none'; status('Projekt gelöscht.','ok'); }
+function addScenarioToProject(){ if(!current) return; const id=val('scenarioSelect'); if(!id) return; current.scenarioIds=[...new Set([...(current.scenarioIds||[]), id])]; renderAssigned(); saveProject(false); }
+function removeScenario(id){ if(!current) return; current.scenarioIds=(current.scenarioIds||[]).filter(x=>x!==id); renderAssigned(); saveProject(false); }
+function renderAssigned(){ const ids=current?.scenarioIds||[]; const html=ids.map(id=>{ const s=scenarios.find(x=>x.id===id); return `<div class="scenarioBox"><div><b>${escapeHtml(s?.name||id)}</b><div class="muted">${escapeHtml(s?.state?.context?.decisionQuestion||'')}</div></div><button onclick="removeScenario('${id}')">entfernen</button></div>`; }).join('') || '<p class="muted">Noch keine Szenarien zugeordnet.</p>'; document.getElementById('assignedScenarios').innerHTML=html; }
+function addTodo(){ if(!current) return; const text=val('todoText').trim(); if(!text) return; current.todos=[{id:uid(),done:false,type:val('todoType'),text}, ...(current.todos||[])]; set('todoText',''); renderTodos(); saveProject(false); }
+function toggleTodo(id){ const t=(current.todos||[]).find(x=>x.id===id); if(t) t.done=!t.done; renderTodos(); saveProject(false); }
+function deleteTodo(id){ current.todos=(current.todos||[]).filter(x=>x.id!==id); renderTodos(); saveProject(false); }
+function renderTodos(){ document.getElementById('todoList').innerHTML=(current?.todos||[]).map(t=>`<div class="scenarioBox"><label style="font-weight:500;"><input style="width:auto;" type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}')"> <b>${escapeHtml(t.type)}</b> · ${escapeHtml(t.text)}</label><button onclick="deleteTodo('${t.id}')">löschen</button></div>`).join('') || '<p class="muted">Keine To-dos.</p>'; }
+function renderProjectCheck(){ if(!current) return; const p=read(); const assigned=(p.scenarioIds||[]).map(id=>scenarios.find(s=>s.id===id)).filter(Boolean); const issues=[]; if(!p.description) issues.push('Beschreibung fehlt'); if(!p.decisionNeed) issues.push('Entscheidungsbedarf fehlt'); if(!p.nextStep) issues.push('Nächster Schritt fehlt'); if(!assigned.length) issues.push('Keine Szenarien zugeordnet'); const sensitive=detectSensitive(JSON.stringify(p)+' '+JSON.stringify(assigned)); const html=`<div class="grid"><div class="card ${issues.length?'warn':'ok'}"><h3>Struktur</h3>${issues.map(i=>`<span class='pill warn'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">ok</span>'}</div><div class="card ${sensitive.length?'bad':'ok'}"><h3>Sensibilitätsmuster</h3>${sensitive.map(i=>`<span class='pill bad'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">keine Treffer</span>'}</div><div class="card ok"><h3>Zugeordnete Szenarien</h3><p>${assigned.length}</p></div></div>`; document.getElementById('projectCheck').innerHTML=html; }
+function detectSensitive(text){ const hits=[]; if(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text)) hits.push('E-Mail-Adressen'); if(/\b(?:\+49|0)[\d\s\-\/]{7,}\b/.test(text)) hits.push('Telefonnummern'); if(/\b(?:Klient|Klientin|Patient|Patientin|Bewohner|Bewohnerin)\b/i.test(text)) hits.push('Klienten-/Patientenkontext'); return [...new Set(hits)]; }
+function makeDossier(){ if(!current) return ''; const p=read(); const assigned=(p.scenarioIds||[]).map(id=>scenarios.find(s=>s.id===id)).filter(Boolean); return `Projekt-Dossier\n\nTitel:\n${p.title}\n\nStatus:\n${p.status}\n\nPriorität:\n${p.priority}\n\nTags:\n${(p.tags||[]).join(', ')||'—'}\n\nBeschreibung:\n${p.description||'—'}\n\nEntscheidungsbedarf:\n${p.decisionNeed||'—'}\n\nNächster Schritt:\n${p.nextStep||'—'}\n\nGrenzen:\n${p.boundaries||'—'}\n\nZugeordnete Szenarien:\n${assigned.map((s,i)=>`${i+1}. ${s.name}\n   Entscheidungsfrage: ${s.state?.context?.decisionQuestion||'—'}`).join('\n')||'keine'}\n\nOffene To-dos:\n${(p.todos||[]).filter(t=>!t.done).map(t=>`- [${t.type}] ${t.text}`).join('\n')||'keine'}\n\nErledigte To-dos:\n${(p.todos||[]).filter(t=>t.done).map(t=>`- [${t.type}] ${t.text}`).join('\n')||'keine'}\n\nNotizen:\n${p.notes||'—'}\n\nPrüfhinweis:\nDie Projektakte ist eine lokale Arbeitsstruktur. Vor Datenbankmigration Backup exportieren und personenbezogene Inhalte bereinigen.`; }
+function renderDossier(){ document.getElementById('dossier').textContent=makeDossier(); }
+function copyDossier(){ navigator.clipboard?.writeText(makeDossier()); status('Dossier kopiert.','ok'); }
+function downloadDossier(){ download('projektdossier.txt', makeDossier(), 'text/plain;charset=utf-8'); }
+function downloadProjectJson(){ const p=read(); download('projektakte-'+(p.title||'projekt').toLowerCase().replace(/[^a-z0-9]+/gi,'-')+'.json', JSON.stringify({schema:'ki-kernel-project-v1', exportedAt:now(), project:p}, null, 2), 'application/json;charset=utf-8'); }
+function download(filename, text, type){ const blob=new Blob([text],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href); }
+function val(id){ return document.getElementById(id).value; }
+function set(id,v){ document.getElementById(id).value=v||''; }
+['title','statusField','priority','tags','description','decisionNeed','nextStep','boundaries','notes'].forEach(id=>document.addEventListener('input', e=>{ if(e.target?.id===id && current) renderDossier(); }));
+renderProjectOptions(); renderScenarioOptions();
+</script>
+</body>
+</html>
