@@ -17,6 +17,8 @@ const BASIC_AUTH_USER = process.env.BASIC_AUTH_USER || "";
 const BASIC_AUTH_PASSWORD = process.env.BASIC_AUTH_PASSWORD || "";
 const MAX_REQUEST_BYTES = process.env.MAX_REQUEST_BYTES || "2mb";
 const MAX_UPLOAD_BYTES = Number(process.env.MAX_UPLOAD_BYTES || 8 * 1024 * 1024);
+const DATABASE_URL = process.env.DATABASE_URL || "";
+const STORAGE_MODE = process.env.STORAGE_MODE || "local";
 
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_BYTES } });
@@ -52,8 +54,32 @@ function basicAuth(req, res, next) {
 
 app.use(basicAuth);
 
+function maskDatabaseUrl(url) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.hostname}${parsed.port ? `:${parsed.port}` : ""}${parsed.pathname}`;
+  } catch {
+    return "configured-but-not-parseable";
+  }
+}
+
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, model: OPENAI_MODEL, openaiConfigured: Boolean(OPENAI_API_KEY), maxUploadBytes: MAX_UPLOAD_BYTES });
+  res.json({
+    ok: true,
+    appVersion: "1.7-db-preparation",
+    model: OPENAI_MODEL,
+    openaiConfigured: Boolean(OPENAI_API_KEY),
+    databaseConfigured: Boolean(DATABASE_URL),
+    databaseReachable: null,
+    databaseReachableNote: "App 1.7 prüft nur, ob DATABASE_URL gesetzt ist. Eine echte Verbindungsprüfung folgt in App 1.8.",
+    databaseUrlPreview: maskDatabaseUrl(DATABASE_URL),
+    storageMode: STORAGE_MODE,
+    allowedStorageModes: ["local", "hybrid", "db"],
+    maxRequestBytes: MAX_REQUEST_BYTES,
+    maxUploadBytes: MAX_UPLOAD_BYTES,
+    basicAuthEnabled: Boolean(BASIC_AUTH_USER && BASIC_AUTH_PASSWORD)
+  });
 });
 
 function fileExtension(name = "") {
