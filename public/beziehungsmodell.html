@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beziehungsmodell · KI-Kernel GPT</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
+    body { margin:0; background:#f1f5f9; line-height:1.55; }
+    header { background:#020617; color:white; padding:42px 24px; }
+    main { max-width:1240px; margin:0 auto; padding:24px; }
+    .hero { max-width:1240px; margin:0 auto; }
+    h1 { font-size: clamp(30px, 5vw, 52px); margin:12px 0; line-height:1.05; }
+    h2 { margin:0 0 12px; font-size:22px; }
+    h3 { margin:16px 0 8px; font-size:18px; }
+    .badge { display:inline-block; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 12px; color:#cbd5e1; font-size:14px; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:22px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,.05); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
+    label { display:block; font-weight:750; font-size:14px; color:#334155; margin-bottom:6px; }
+    select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font:inherit; background:white; }
+    textarea { min-height:90px; }
+    button, .btn { appearance:none; border:1px solid #cbd5e1; border-radius:14px; padding:10px 14px; background:white; color:#0f172a; font-weight:800; cursor:pointer; text-decoration:none; display:inline-block; }
+    .primary { background:#020617; color:white; border-color:#020617; }
+    .muted { color:#64748b; font-size:14px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { border-bottom:1px solid #e2e8f0; padding:10px; text-align:left; vertical-align:top; }
+    th { background:#f8fafc; }
+    .rel { border:1px solid #e2e8f0; border-radius:20px; padding:16px; background:#f8fafc; margin-bottom:12px; }
+    .pill { display:inline-block; border-radius:999px; background:#f8fafc; border:1px solid #e2e8f0; padding:5px 10px; margin:2px; font-size:12px; font-weight:750; }
+    .good { background:#ecfdf5; border-color:#bbf7d0; }
+    .warn { background:#fffbeb; border-color:#fde68a; }
+    .bad { background:#fff1f2; border-color:#fecdd3; }
+    .node { display:inline-flex; align-items:center; justify-content:center; min-height:54px; padding:10px 14px; border-radius:999px; border:1px solid #cbd5e1; background:white; font-weight:800; margin:6px; }
+    .line { padding:10px; border-radius:14px; border:1px solid #e2e8f0; background:#f8fafc; margin:8px 0; }
+    pre { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:18px; padding:18px; overflow:auto; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="badge">Beziehungsmodell · Schritt 3</span>
+    <h1>Vom Persona-Profil zum Beziehungsnetz</h1>
+    <p>Diese Seite ergänzt die App um Beziehungen zwischen Personas. Sie erkennt Koalitionen, Konfliktachsen, Brückenrollen, isolierte Rollen und Macht-/Einflusskonzentrationen.</p>
+    <p><a class="btn" href="/">Zurück zur App</a> <a class="btn" href="/phasenmodell.html">Phasenmodell</a> <a class="btn" href="/vergleich-plus.html">Vergleich+</a></p>
+  </div>
+</header>
+<main>
+  <section class="card">
+    <h2>Szenario auswählen</h2>
+    <p class="muted">Speichere in der App zuerst ein Szenario. Diese Seite liest die lokale Browser-Speicherung der App.</p>
+    <div class="grid">
+      <div><label>Gespeichertes Szenario</label><select id="scenarioSelect"></select></div>
+      <div><label>Startlogik</label><select id="preset"><option value="balanced">ausgewogen</option><option value="tension">mehr Spannung</option><option value="coalition">Koalitionen betonen</option></select></div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="primary" onclick="loadScenario()">Beziehungsmodell erzeugen</button>
+      <button onclick="addRelation()">Beziehung hinzufügen</button>
+      <button onclick="renderAnalysis()">Neu berechnen</button>
+      <button onclick="copyReport()">Beziehungsbericht kopieren</button>
+      <button onclick="downloadReport()">Als TXT herunterladen</button>
+    </div>
+  </section>
+  <div id="scenarioInfo"></div>
+  <section class="card" id="editor" style="display:none;">
+    <h2>Beziehungen bearbeiten</h2>
+    <p class="muted">Werte von 1 bis 5: Vertrauen, Spannung, Einfluss und Abhängigkeit. Beziehungen sind bewusst heuristisch: Sie markieren Hypothesen, keine Diagnose.</p>
+    <div id="relations"></div>
+  </section>
+  <div id="analysis"></div>
+</main>
+<script>
+const STORAGE_KEY = "ki-kernel-szenarien-v8";
+const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let currentItem = null;
+let relations = [];
+const arr = x => Array.isArray(x) ? x : [];
+function escapeHtml(s){ return String(s||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;","\"":"&quot;"}[c])); }
+function opt(){
+  const sel=document.getElementById("scenarioSelect");
+  sel.innerHTML = `<option value="">— Szenario wählen —</option>` + saved.map(x=>`<option value="${x.id}">${escapeHtml(x.name)}</option>`).join("");
+  if(saved[0]) sel.value=saved[0].id;
+}
+function byId(id){ return saved.find(x=>x.id===id); }
+function personas(){ return arr(currentItem?.state?.personas).map(p=>p.name).filter(Boolean); }
+function personaObj(name){ return arr(currentItem?.state?.personas).find(p=>p.name===name) || {}; }
+function baseRelation(a,b,idx){
+  const preset=document.getElementById("preset").value;
+  const pa=personaObj(a), pb=personaObj(b);
+  let trust = 3, tension = 2, influence = Math.max(Number(pa.influence||3), Number(pb.influence||3)), dependency = 2;
+  const sa = `${pa.stance||""} ${pa.conflictStyle||""} ${pa.informalRole||""}`.toLowerCase();
+  const sb = `${pb.stance||""} ${pb.conflictStyle||""} ${pb.informalRole||""}`.toLowerCase();
+  if(sa.includes("skept") !== sb.includes("skept")) tension += 1;
+  if(sa.includes("schutz") !== sb.includes("schutz")) tension += 1;
+  if(sa.includes("treiber") || sb.includes("treiber")) influence += 1;
+  if(sa.includes("brücke") || sb.includes("brücke")) trust += 1;
+  if(preset === "tension") tension += 1;
+  if(preset === "coalition" && idx % 2 === 0) trust += 1;
+  return { id: Math.random().toString(36).slice(2,9), from:a, to:b, trust:clamp(trust), tension:clamp(tension), influence:clamp(influence), dependency:clamp(dependency), note:"automatisch erzeugte Beziehungshypothese" };
+}
+function clamp(v){ return Math.max(1, Math.min(5, Number(v||3))); }
+function loadScenario(){
+  currentItem=byId(document.getElementById("scenarioSelect").value);
+  if(!currentItem){ document.getElementById("scenarioInfo").innerHTML=`<section class="card bad"><b>Kein Szenario ausgewählt.</b></section>`; return; }
+  const ps=personas();
+  relations=[];
+  for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++) relations.push(baseRelation(ps[i],ps[j],relations.length));
+  document.getElementById("scenarioInfo").innerHTML = `<section class="card"><h2>Aktuelles Beziehungsmodell</h2><p><b>${escapeHtml(currentItem.name)}</b></p><p class="muted">${escapeHtml(currentItem.state.context?.title||"")}</p><div>${ps.map(p=>`<span class="node">${escapeHtml(p)}</span>`).join("")}</div></section>`;
+  document.getElementById("editor").style.display="block";
+  renderRelations(); renderAnalysis();
+}
+function addRelation(){
+  if(!currentItem) return loadScenario();
+  const ps=personas();
+  if(ps.length<2) return;
+  relations.push({id:Math.random().toString(36).slice(2,9), from:ps[0], to:ps[1], trust:3, tension:2, influence:3, dependency:2, note:"manuell ergänzt"});
+  renderRelations(); renderAnalysis();
+}
+function removeRelation(id){ relations=relations.filter(r=>r.id!==id); renderRelations(); renderAnalysis(); }
+function upd(id,key,val){ const r=relations.find(x=>x.id===id); if(!r) return; r[key]=key.match(/trust|tension|influence|dependency/)?Number(val):val; }
+function renderRelations(){
+  const ps=personas();
+  const opts=ps.map(p=>`<option>${escapeHtml(p)}</option>`).join("");
+  document.getElementById("relations").innerHTML = relations.map((r,idx)=>`
+    <div class="rel">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;"><h3>${idx+1}. Beziehung</h3><button onclick="removeRelation('${r.id}')">löschen</button></div>
+      <div class="grid">
+        <div><label>Von</label><select onchange="upd('${r.id}','from',this.value)">${ps.map(p=>`<option ${p===r.from?'selected':''}>${escapeHtml(p)}</option>`).join("")}</select></div>
+        <div><label>Zu</label><select onchange="upd('${r.id}','to',this.value)">${ps.map(p=>`<option ${p===r.to?'selected':''}>${escapeHtml(p)}</option>`).join("")}</select></div>
+        ${slider(r,'trust','Vertrauen')}
+        ${slider(r,'tension','Spannung')}
+        ${slider(r,'influence','Einfluss')}
+        ${slider(r,'dependency','Abhängigkeit')}
+        <div><label>Notiz</label><textarea oninput="upd('${r.id}','note',this.value)">${escapeHtml(r.note)}</textarea></div>
+      </div>
+    </div>
+  `).join("");
+}
+function slider(r,key,label){ return `<div><label>${label} 1–5</label><input type="range" min="1" max="5" value="${r[key]}" oninput="upd('${r.id}','${key}',this.value); this.nextElementSibling.textContent=this.value;"><span class="pill">${r[key]}</span><p class="muted">${labelText(key,r[key])}</p></div>`; }
+function labelText(key,v){ v=Number(v); const m={trust:["sehr gering","gering","tragfähig","hoch","sehr hoch"],tension:["kaum Spannung","gering","spürbar","hoch","eskalationsnah"],influence:["kaum Einfluss","gering","mittel","hoch","dominant"],dependency:["unabhängig","gering","mittel","hoch","stark abhängig"]}; return m[key]?.[v-1]||"prüfen"; }
+function renderAnalysis(){
+  if(!currentItem) return;
+  const metrics=analyse();
+  document.getElementById("analysis").innerHTML = `
+    <section class="grid">
+      <div class="card"><h2>Koalitionsradar</h2>${metrics.coalitions.length?metrics.coalitions.map(x=>`<div class="line good"><b>${escapeHtml(x.from)} ↔ ${escapeHtml(x.to)}</b><br>Vertrauen ${x.trust}/5, Spannung ${x.tension}/5</div>`).join(""):"<p>Keine starke Koalition erkennbar.</p>"}</div>
+      <div class="card"><h2>Konfliktachsen</h2>${metrics.conflicts.length?metrics.conflicts.map(x=>`<div class="line bad"><b>${escapeHtml(x.from)} ↔ ${escapeHtml(x.to)}</b><br>Spannung ${x.tension}/5, Vertrauen ${x.trust}/5</div>`).join(""):"<p>Keine starke Konfliktachse erkennbar.</p>"}</div>
+      <div class="card"><h2>Brückenrollen</h2>${metrics.bridges.length?metrics.bridges.map(x=>`<span class="pill good">${escapeHtml(x.name)} · Brückenwert ${x.score}</span>`).join(""):"<p>Keine eindeutige Brückenrolle.</p>"}</div>
+      <div class="card"><h2>Isolierte Rollen</h2>${metrics.isolated.length?metrics.isolated.map(x=>`<span class="pill warn">${escapeHtml(x.name)} · Einbindung ${x.score}</span>`).join(""):"<p>Keine deutliche Isolation.</p>"}</div>
+    </section>
+    <section class="card">
+      <h2>Netzwerkmatrix</h2>
+      ${matrixHtml(metrics)}
+    </section>
+    <section class="card">
+      <h2>Beratungsinterpretation</h2>
+      <p>${escapeHtml(metrics.interpretation)}</p>
+      <h3>Empfohlene nächste Interventionen</h3>
+      <ul>${metrics.recommendations.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul>
+    </section>
+    <section class="card">
+      <h2>Beziehungsbericht</h2>
+      <pre id="relationshipReport">${escapeHtml(makeReport(metrics))}</pre>
+    </section>
+  `;
+}
+function analyse(){
+  const ps=personas();
+  const coalitions=relations.filter(r=>r.trust>=4 && r.tension<=2);
+  const conflicts=relations.filter(r=>r.tension>=4 || (r.tension>=3 && r.trust<=2));
+  const per=Object.fromEntries(ps.map(p=>[p,{trustSum:0,tensionSum:0,connections:0,influenceSum:0,dependencySum:0}]));
+  relations.forEach(r=>{ [r.from,r.to].forEach(name=>{ if(!per[name]) return; per[name].trustSum+=Number(r.trust); per[name].tensionSum+=Number(r.tension); per[name].influenceSum+=Number(r.influence); per[name].dependencySum+=Number(r.dependency); per[name].connections++; }); });
+  const bridges=Object.entries(per).map(([name,v])=>({name, score:Math.round((v.trustSum||0)+(v.influenceSum||0)-(v.tensionSum||0)/2)})).filter(x=>x.score>=6).sort((a,b)=>b.score-a.score).slice(0,4);
+  const isolated=Object.entries(per).map(([name,v])=>({name, score:Math.round((v.trustSum||0)-(v.tensionSum||0)/2)})).filter(x=>x.score<=2).sort((a,b)=>a.score-b.score).slice(0,4);
+  const rec=[];
+  if(conflicts.length) rec.push("Konfliktachsen früh moderieren: Positionen in legitime Interessen übersetzen, bevor Entscheidungen verdichtet werden.");
+  if(bridges.length) rec.push(`Brückenrolle(n) gezielt nutzen: ${bridges.map(x=>x.name).join(", ")}.`);
+  if(isolated.length) rec.push(`Isolierte Rolle(n) niedrigschwellig einbinden: ${isolated.map(x=>x.name).join(", ")}.`);
+  if(coalitions.length) rec.push("Koalitionen nicht nur nutzen, sondern auf blinde Flecken und Ausschlüsse prüfen.");
+  if(!rec.length) rec.push("Beziehungsnetz wirkt unauffällig. Fokus auf Annahmenprüfung und Ressourcenverlauf legen.");
+  const interpretation = conflicts.length ? "Das Netzwerk enthält relevante Spannungsachsen. Entscheidungen sollten nicht nur sachlich, sondern beziehungs- und rollenbewusst vorbereitet werden." : coalitions.length ? "Das Netzwerk enthält tragfähige Koalitionen. Wichtig ist, dass daraus keine informelle Ausschlussdynamik entsteht." : "Das Beziehungsnetz wirkt eher ausgewogen; zentrale Hebel liegen wahrscheinlich in Ressourcen, Annahmen und Interventionen.";
+  return {coalitions, conflicts, bridges, isolated, per, interpretation, recommendations:rec};
+}
+function matrixHtml(metrics){
+  const ps=personas();
+  return `<table><thead><tr><th>Persona</th><th>Vertrauen gesamt</th><th>Spannung gesamt</th><th>Einfluss gesamt</th><th>Abhängigkeit gesamt</th></tr></thead><tbody>${ps.map(p=>{const v=metrics.per[p]||{};return `<tr><td><b>${escapeHtml(p)}</b></td><td>${v.trustSum||0}</td><td>${v.tensionSum||0}</td><td>${v.influenceSum||0}</td><td>${v.dependencySum||0}</td></tr>`}).join("")}</tbody></table>`;
+}
+function makeReport(m){
+  return `Beziehungsmodell Bericht\n\nSzenario:\n${currentItem?.state?.context?.title || currentItem?.name}\n\nKoalitionen:\n${m.coalitions.length?m.coalitions.map(r=>`${r.from} ↔ ${r.to}: Vertrauen ${r.trust}, Spannung ${r.tension}`).join("\n"):"keine starke Koalition"}\n\nKonfliktachsen:\n${m.conflicts.length?m.conflicts.map(r=>`${r.from} ↔ ${r.to}: Spannung ${r.tension}, Vertrauen ${r.trust}`).join("\n"):"keine starke Konfliktachse"}\n\nBrückenrollen:\n${m.bridges.length?m.bridges.map(x=>`${x.name}: Brückenwert ${x.score}`).join("\n"):"keine eindeutige Brückenrolle"}\n\nIsolierte Rollen:\n${m.isolated.length?m.isolated.map(x=>`${x.name}: Einbindung ${x.score}`).join("\n"):"keine deutliche Isolation"}\n\nInterpretation:\n${m.interpretation}\n\nEmpfohlene Interventionen:\n${m.recommendations.map(x=>`- ${x}`).join("\n")}\n\nPrüfhinweis:\nDas Beziehungsmodell ist eine Hypothesenkarte. Es ersetzt keine empirische Diagnose und darf nicht zur Bewertung realer Personen verwendet werden.`;
+}
+function copyReport(){ const t=document.getElementById("relationshipReport")?.innerText || ""; navigator.clipboard?.writeText(t); }
+function downloadReport(){ const t=document.getElementById("relationshipReport")?.innerText || ""; const blob=new Blob([t],{type:"text/plain;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="beziehungsmodell-bericht.txt"; a.click(); URL.revokeObjectURL(a.href); }
+opt();
+if(saved[0]) loadScenario();
+</script>
+</body>
+</html>
