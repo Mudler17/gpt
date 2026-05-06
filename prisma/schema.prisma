@@ -1,204 +1,202 @@
-// KI-Kernel GPT · Prisma Schema Draft
-// Stand: App 1.7 · Datenbank-Vorbereitung
-// Hinweis: Prisma ist noch nicht installiert und dieses Schema wird noch nicht produktiv genutzt.
+// KI-Kernel GPT · Prisma Schema
+// Stand: App 1.8 · PostgreSQL + Prisma technisch angeschlossen
 
-// Nach Installation aktivieren:
-// generator client {
-//   provider = "prisma-client-js"
-// }
+generator client {
+  provider = "prisma-client-js"
+}
 
-// datasource db {
-//   provider = "postgresql"
-//   url      = env("DATABASE_URL")
-// }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-// model User {
-//   id          String   @id @default(cuid())
-//   email       String?  @unique
-//   displayName String?
-//   role        String   @default("owner")
-//   createdAt   DateTime @default(now())
-//   updatedAt   DateTime @updatedAt
-//
-//   projects        Project[]
-//   scenarios       Scenario[]
-//   phaseSets       PhaseSet[]
-//   consultingCases ConsultingCase[]
-//   reports         Report[]
-//   imports         Import[]
-//   auditLogs       AuditLog[]
-// }
+model User {
+  id          String   @id @default(cuid())
+  email       String?  @unique
+  displayName String?
+  role        String   @default("owner")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-// model Project {
-//   id           String   @id @default(cuid())
-//   userId       String
-//   title        String
-//   description  String?
-//   status       String   @default("Vorbereitung")
-//   priority     String   @default("mittel")
-//   tags         Json?
-//   decisionNeed String?
-//   nextStep     String?
-//   boundaries   String?
-//   notes        String?
-//   createdAt    DateTime @default(now())
-//   updatedAt    DateTime @updatedAt
-//   archivedAt   DateTime?
-//
-//   user              User              @relation(fields: [userId], references: [id])
-//   projectScenarios  ProjectScenario[]
-//   consultingCases   ConsultingCase[]
-//   reports           Report[]
-//   imports           Import[]
-// }
+  projects        Project[]
+  scenarios       Scenario[]
+  phaseSets       PhaseSet[]
+  consultingCases ConsultingCase[]
+  reports         Report[]
+  imports         Import[]
+  auditLogs       AuditLog[]
+}
 
-// model Scenario {
-//   id               String   @id @default(cuid())
-//   userId           String
-//   title            String
-//   name             String?
-//   description      String?
-//   currentVersionId String?
-//   createdAt        DateTime @default(now())
-//   updatedAt        DateTime @updatedAt
-//   archivedAt       DateTime?
-//
-//   user             User              @relation(fields: [userId], references: [id])
-//   versions         ScenarioVersion[]
-//   projectScenarios ProjectScenario[]
-//   phases           ScenarioPhase[]
-//   relations        ScenarioRelation[]
-//   consultingCases  ConsultingCase[]
-//   reports          Report[]
-// }
+model Project {
+  id           String    @id @default(cuid())
+  userId       String
+  title        String
+  description  String?
+  status       String    @default("Vorbereitung")
+  priority     String    @default("mittel")
+  tags         Json?
+  decisionNeed String?
+  nextStep     String?
+  boundaries   String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
 
-// model ProjectScenario {
-//   id           String   @id @default(cuid())
-//   projectId    String
-//   scenarioId   String
-//   relationType String   @default("contains")
-//   sortOrder    Int      @default(0)
-//   createdAt    DateTime @default(now())
-//
-//   project  Project  @relation(fields: [projectId], references: [id])
-//   scenario Scenario @relation(fields: [scenarioId], references: [id])
-//
-//   @@unique([projectId, scenarioId])
-// }
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectScenarios ProjectScenario[]
+  consultingCases  ConsultingCase[]
+  reports          Report[]
+  imports          Import[]
+}
 
-// model ScenarioVersion {
-//   id            String   @id @default(cuid())
-//   scenarioId    String
-//   versionNumber Int
-//   source        String?
-//   stateJson     Json
-//   note          String?
-//   createdBy     String?
-//   createdAt     DateTime @default(now())
-//
-//   scenario Scenario @relation(fields: [scenarioId], references: [id])
-//
-//   @@unique([scenarioId, versionNumber])
-// }
+model Scenario {
+  id               String    @id @default(cuid())
+  userId           String
+  title            String
+  name             String?
+  description      String?
+  currentVersionId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
 
-// model PhaseSet {
-//   id        String   @id @default(cuid())
-//   userId    String
-//   name      String
-//   phases    Json
-//   isBuiltin Boolean  @default(false)
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-//
-//   user User @relation(fields: [userId], references: [id])
-// }
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions         ScenarioVersion[]
+  projectScenarios ProjectScenario[]
+  phases           ScenarioPhase[]
+  relations        ScenarioRelation[]
+  consultingCases  ConsultingCase[]
+  reports          Report[]
+}
 
-// model ScenarioPhase {
-//   id                String   @id @default(cuid())
-//   scenarioId        String
-//   scenarioVersionId String?
-//   phaseSetId        String?
-//   phasesJson        Json
-//   createdAt         DateTime @default(now())
-//   updatedAt         DateTime @updatedAt
-//
-//   scenario Scenario @relation(fields: [scenarioId], references: [id])
-// }
+model ProjectScenario {
+  id           String   @id @default(cuid())
+  projectId    String
+  scenarioId   String
+  relationType String   @default("contains")
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
 
-// model ScenarioRelation {
-//   id                String   @id @default(cuid())
-//   scenarioId        String
-//   scenarioVersionId String?
-//   relationsJson     Json
-//   createdAt         DateTime @default(now())
-//   updatedAt         DateTime @updatedAt
-//
-//   scenario Scenario @relation(fields: [scenarioId], references: [id])
-// }
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
 
-// model ConsultingCase {
-//   id              String   @id @default(cuid())
-//   userId          String
-//   projectId       String?
-//   scenarioId      String?
-//   title           String
-//   status          String   @default("Vorbereitung")
-//   priority        String   @default("mittel")
-//   mandate         String?
-//   decisionNeed    String?
-//   deliverable     String?
-//   boundaries      String?
-//   consultingNotes String?
-//   reflection      String?
-//   todos           Json?
-//   journal         Json?
-//   createdAt       DateTime @default(now())
-//   updatedAt       DateTime @updatedAt
-//
-//   user     User      @relation(fields: [userId], references: [id])
-//   project  Project?  @relation(fields: [projectId], references: [id])
-//   scenario Scenario? @relation(fields: [scenarioId], references: [id])
-// }
+  @@unique([projectId, scenarioId])
+}
 
-// model Report {
-//   id          String   @id @default(cuid())
-//   userId      String
-//   projectId   String?
-//   scenarioId  String?
-//   reportType  String
-//   title       String
-//   content     String?
-//   contentJson Json?
-//   createdAt   DateTime @default(now())
-//
-//   user     User      @relation(fields: [userId], references: [id])
-//   project  Project?  @relation(fields: [projectId], references: [id])
-//   scenario Scenario? @relation(fields: [scenarioId], references: [id])
-// }
+model ScenarioVersion {
+  id            String   @id @default(cuid())
+  scenarioId    String
+  versionNumber Int
+  source        String?
+  stateJson     Json
+  note          String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
 
-// model Import {
-//   id            String   @id @default(cuid())
-//   userId        String
-//   projectId     String?
-//   filename      String?
-//   documentType  String?
-//   analysisMode  String?
-//   extractedText String?
-//   draftJson     Json?
-//   createdAt     DateTime @default(now())
-//
-//   user    User     @relation(fields: [userId], references: [id])
-//   project Project? @relation(fields: [projectId], references: [id])
-// }
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
 
-// model AuditLog {
-//   id         String   @id @default(cuid())
-//   userId     String?
-//   entityType String
-//   entityId   String?
-//   action     String
-//   metadata   Json?
-//   createdAt  DateTime @default(now())
-//
-//   user User? @relation(fields: [userId], references: [id])
-// }
+  @@unique([scenarioId, versionNumber])
+}
+
+model PhaseSet {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  phases    Json
+  isBuiltin Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ScenarioPhase {
+  id                String   @id @default(cuid())
+  scenarioId        String
+  scenarioVersionId String?
+  phaseSetId        String?
+  phasesJson        Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+}
+
+model ScenarioRelation {
+  id                String   @id @default(cuid())
+  scenarioId        String
+  scenarioVersionId String?
+  relationsJson     Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+}
+
+model ConsultingCase {
+  id              String   @id @default(cuid())
+  userId          String
+  projectId       String?
+  scenarioId      String?
+  title           String
+  status          String   @default("Vorbereitung")
+  priority        String   @default("mittel")
+  mandate         String?
+  decisionNeed    String?
+  deliverable     String?
+  boundaries      String?
+  consultingNotes String?
+  reflection      String?
+  todos           Json?
+  journal         Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project  Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  scenario Scenario? @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  userId      String
+  projectId   String?
+  scenarioId  String?
+  reportType  String
+  title       String
+  content     String?
+  contentJson Json?
+  createdAt   DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project  Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  scenario Scenario? @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+}
+
+model Import {
+  id            String   @id @default(cuid())
+  userId        String
+  projectId     String?
+  filename      String?
+  documentType  String?
+  analysisMode  String?
+  extractedText String?
+  draftJson     Json?
+  createdAt     DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  entityType String
+  entityId   String?
+  action     String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
