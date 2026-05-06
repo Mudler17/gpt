@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Backup · KI-Kernel GPT 1.5</title>
+  <title>Backup · KI-Kernel GPT 1.6</title>
   <style>
     :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
     body { margin:0; background:#f1f5f9; line-height:1.55; }
@@ -21,7 +21,6 @@
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
     label { display:block; font-weight:800; font-size:14px; color:#334155; margin-bottom:6px; }
     select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font:inherit; background:white; }
-    textarea { min-height:160px; }
     .muted { color:#64748b; font-size:14px; }
     .pill { display:inline-block; border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc; padding:5px 10px; margin:2px; font-size:12px; font-weight:800; }
     .ok { background:#ecfdf5; border-color:#bbf7d0; }
@@ -37,10 +36,10 @@
 <body>
 <header>
   <div class="hero">
-    <span class="badge">KI-Kernel GPT 1.5 · Backup und Datenmodell-Check</span>
+    <span class="badge">KI-Kernel GPT 1.6 · Backup und Datenmodell-Check</span>
     <h1>Lokale Daten sichern, prüfen und wiederherstellen</h1>
-    <p>Diese Seite exportiert und importiert die LocalStorage-Daten der App. Sie dient als Sicherheitsnetz vor einer späteren Datenbankmigration.</p>
-    <p><a class="btn" href="/">Zur App</a> <a class="btn" href="/hilfe.html">Hilfe</a></p>
+    <p>Diese Seite exportiert und importiert die LocalStorage-Daten der App inklusive Projektakten.</p>
+    <p><a class="btn" href="/">Zur App</a> <a class="btn" href="/projekte.html">Projektakte</a> <a class="btn" href="/hilfe.html">Hilfe</a></p>
   </div>
 </header>
 <main>
@@ -52,17 +51,18 @@
   <section class="grid">
     <div class="card">
       <h2>1. Vollbackup exportieren</h2>
-      <p class="muted">Enthält Szenarien, Phasen-Sets, Beratungsfälle und Import+-Entwürfe.</p>
+      <p class="muted">Enthält Szenarien, Projekte, Phasen-Sets, Beratungsfälle und Import+-Entwürfe.</p>
       <button class="primary" onclick="downloadFullBackup()">Vollbackup herunterladen</button>
       <button onclick="copyFullBackup()">Vollbackup kopieren</button>
     </div>
     <div class="card">
       <h2>2. Teildaten exportieren</h2>
       <p class="muted">Für gezielte Sicherungen oder spätere Tests.</p>
-      <p><button onclick="downloadKey('ki-kernel-szenarien-v8','szenarien-backup.json')">Szenarien exportieren</button></p>
-      <p><button onclick="downloadKey('ki-kernel-phase-sets-v1','phasen-sets-backup.json')">Phasen-Sets exportieren</button></p>
-      <p><button onclick="downloadKey('ki-kernel-personal-consulting-cases-v1','beratungsfaelle-backup.json')">Beratungsfälle exportieren</button></p>
-      <p><button onclick="downloadKey('ki-kernel-import-plus-drafts','import-entwuerfe-backup.json')">Import-Entwürfe exportieren</button></p>
+      <p><button onclick="downloadKey(KEYS.projects,'projekte-backup.json')">Projekte exportieren</button></p>
+      <p><button onclick="downloadKey(KEYS.scenarios,'szenarien-backup.json')">Szenarien exportieren</button></p>
+      <p><button onclick="downloadKey(KEYS.phaseSets,'phasen-sets-backup.json')">Phasen-Sets exportieren</button></p>
+      <p><button onclick="downloadKey(KEYS.consultingCases,'beratungsfaelle-backup.json')">Beratungsfälle exportieren</button></p>
+      <p><button onclick="downloadKey(KEYS.importDrafts,'import-entwuerfe-backup.json')">Import-Entwürfe exportieren</button></p>
     </div>
   </section>
 
@@ -81,7 +81,7 @@
 
   <section class="card">
     <h2>4. Datenmodell-Check</h2>
-    <p class="muted">Prüft grob Vollständigkeit, Zählwerte, mögliche personenbezogene Muster und Datenbank-Bereitschaft.</p>
+    <p class="muted">Prüft grob Vollständigkeit, Zählwerte, Projekt-Szenario-Zuordnungen, mögliche personenbezogene Muster und Datenbank-Bereitschaft.</p>
     <button class="primary" onclick="renderCheck()">Datenmodell prüfen</button>
     <button onclick="downloadDbPlan()">DB-Migrationsplan herunterladen</button>
     <div id="check" style="margin-top:16px;"></div>
@@ -101,6 +101,7 @@
 </main>
 <script>
 const KEYS = {
+  projects: 'ki-kernel-projects-v1',
   scenarios: 'ki-kernel-szenarien-v8',
   phaseSets: 'ki-kernel-phase-sets-v1',
   consultingCases: 'ki-kernel-personal-consulting-cases-v1',
@@ -109,7 +110,7 @@ const KEYS = {
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function now(){ return new Date().toISOString(); }
 function parseKey(key){ try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } }
-function fullBackup(){ return { schema:'ki-kernel-local-backup', version:'1.5', exportedAt:now(), source:location.origin, data:{ scenarios:parseKey(KEYS.scenarios), phaseSets:parseKey(KEYS.phaseSets), consultingCases:parseKey(KEYS.consultingCases), importDrafts:parseKey(KEYS.importDrafts) } }; }
+function fullBackup(){ return { schema:'ki-kernel-local-backup', version:'1.6', exportedAt:now(), source:location.origin, data:{ projects:parseKey(KEYS.projects), scenarios:parseKey(KEYS.scenarios), phaseSets:parseKey(KEYS.phaseSets), consultingCases:parseKey(KEYS.consultingCases), importDrafts:parseKey(KEYS.importDrafts) } }; }
 function download(filename, text){ const blob=new Blob([text],{type:'application/json;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href); }
 function downloadFullBackup(){ download('ki-kernel-vollbackup-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(fullBackup(),null,2)); }
 function copyFullBackup(){ navigator.clipboard?.writeText(JSON.stringify(fullBackup(),null,2)); }
@@ -118,7 +119,7 @@ function refreshPreview(){ document.getElementById('preview').textContent = JSON
 function normalizeBackup(obj){
   if(obj?.schema === 'ki-kernel-local-backup') return obj.data || {};
   if(obj?.schema === 'ki-kernel-partial-backup' && obj.key) return { partialKey: obj.key, partialData: Array.isArray(obj.data) ? obj.data : [] };
-  if(obj?.data && (obj.data.scenarios || obj.data.phaseSets)) return obj.data;
+  if(obj?.data && (obj.data.scenarios || obj.data.phaseSets || obj.data.projects)) return obj.data;
   if(Array.isArray(obj)) return { scenarios: obj };
   return obj || {};
 }
@@ -133,6 +134,7 @@ async function runImport(){
     if(mode==='replace' && !confirm('Vorhandene lokale App-Daten wirklich ersetzen? Vorher Backup exportiert?')) return;
     if(data.partialKey){ const old=parseKey(data.partialKey); const next=mode==='replace'?data.partialData:mergeById(old,data.partialData); localStorage.setItem(data.partialKey, JSON.stringify(next)); }
     else {
+      writeKey(KEYS.projects, data.projects, mode);
       writeKey(KEYS.scenarios, data.scenarios, mode);
       writeKey(KEYS.phaseSets, data.phaseSets, mode);
       writeKey(KEYS.consultingCases, data.consultingCases, mode);
@@ -143,7 +145,7 @@ async function runImport(){
 }
 function writeKey(key, incoming, mode){ if(!Array.isArray(incoming)) return; const old=parseKey(key); const next=mode==='replace'?incoming:mergeById(old,incoming); localStorage.setItem(key, JSON.stringify(next)); }
 function mergeById(oldItems, newItems){ const map=new Map(); [...oldItems, ...newItems].forEach(item=>{ const id=item?.id || uid(); map.set(id, {...item,id}); }); return [...map.values()]; }
-function summarizeData(data){ if(data.partialKey) return `Teildaten: ${data.partialKey}, ${data.partialData?.length||0} Einträge`; return `Szenarien ${data.scenarios?.length||0}, Phasen-Sets ${data.phaseSets?.length||0}, Beratungsfälle ${data.consultingCases?.length||0}, Import-Entwürfe ${data.importDrafts?.length||0}`; }
+function summarizeData(data){ if(data.partialKey) return `Teildaten: ${data.partialKey}, ${data.partialData?.length||0} Einträge`; return `Projekte ${data.projects?.length||0}, Szenarien ${data.scenarios?.length||0}, Phasen-Sets ${data.phaseSets?.length||0}, Beratungsfälle ${data.consultingCases?.length||0}, Import-Entwürfe ${data.importDrafts?.length||0}`; }
 function escapeHtml(s){ return String(s||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
 function textOf(obj){ return JSON.stringify(obj||{}); }
 function detectSensitive(text){ const hits=[]; if(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text)) hits.push('E-Mail-Adressen'); if(/\b(?:\+49|0)[\d\s\-\/]{7,}\b/.test(text)) hits.push('Telefonnummern'); if(/\b\d{5}\s+[A-ZÄÖÜ][a-zäöüß]+\b/.test(text)) hits.push('Adresse/Postleitzahl-Muster'); if(/\b(?:Klient|Klientin|Patient|Patientin|Bewohner|Bewohnerin)\b/i.test(text)) hits.push('Hinweis auf Klienten-/Patientenkontext'); return [...new Set(hits)]; }
@@ -156,34 +158,54 @@ function checkScenario(item){
   if(!Array.isArray(s.resources) || !s.resources.length) issues.push('keine Ressourcen');
   if(!Array.isArray(s.interventions) || !s.interventions.length) issues.push('keine Interventionen');
   const sensitive=detectSensitive(textOf(s));
-  return { name:item.name || s.context?.title || 'ohne Name', issues, sensitive };
+  return { id:item.id, name:item.name || s.context?.title || 'ohne Name', issues, sensitive };
+}
+function checkProject(project, scenarios){
+  const issues=[];
+  if(!project.title) issues.push('Titel fehlt');
+  if(!project.description) issues.push('Beschreibung fehlt');
+  if(!project.decisionNeed) issues.push('Entscheidungsbedarf fehlt');
+  if(!project.nextStep) issues.push('Nächster Schritt fehlt');
+  const scenarioIds=Array.isArray(project.scenarioIds)?project.scenarioIds:[];
+  if(!scenarioIds.length) issues.push('keine Szenarien zugeordnet');
+  const missing=scenarioIds.filter(id=>!scenarios.find(s=>s.id===id));
+  if(missing.length) issues.push(`${missing.length} fehlende Szenario-Verweise`);
+  const sensitive=detectSensitive(textOf(project));
+  return { name:project.title||'ohne Titel', issues, sensitive, scenarioCount:scenarioIds.length };
 }
 function renderCheck(){
-  const b=fullBackup(); const scenarios=b.data.scenarios||[]; const phaseSets=b.data.phaseSets||[]; const cases=b.data.consultingCases||[]; const drafts=b.data.importDrafts||[];
+  const b=fullBackup(); const projects=b.data.projects||[]; const scenarios=b.data.scenarios||[]; const phaseSets=b.data.phaseSets||[]; const cases=b.data.consultingCases||[]; const drafts=b.data.importDrafts||[];
   const scenarioChecks=scenarios.map(checkScenario);
-  const issueCount=scenarioChecks.reduce((sum,x)=>sum+x.issues.length+x.sensitive.length,0);
+  const projectChecks=projects.map(p=>checkProject(p, scenarios));
+  const issueCount=[...scenarioChecks, ...projectChecks].reduce((sum,x)=>sum+x.issues.length+x.sensitive.length,0);
+  const unassigned=scenarios.filter(s=>!projects.some(p=>Array.isArray(p.scenarioIds)&&p.scenarioIds.includes(s.id)));
   const html=`
     <div class="grid">
+      <div class="card ${projects.length?'ok':'warn'}"><h3>Projekte</h3><p>${projects.length}</p></div>
       <div class="card ${scenarios.length?'ok':'warn'}"><h3>Szenarien</h3><p>${scenarios.length}</p></div>
       <div class="card ${phaseSets.length?'ok':'warn'}"><h3>Eigene Phasen-Sets</h3><p>${phaseSets.length}</p></div>
-      <div class="card ${cases.length?'ok':'warn'}"><h3>Beratungsfälle</h3><p>${cases.length}</p></div>
       <div class="card ${issueCount?'warn':'ok'}"><h3>Prüfhinweise</h3><p>${issueCount}</p></div>
     </div>
+    <h3>Projekt-Prüfung</h3>
+    <table><thead><tr><th>Projekt</th><th>Szenarien</th><th>Strukturhinweise</th><th>Sensibilitätsmuster</th></tr></thead><tbody>
+      ${projectChecks.map(x=>`<tr><td><b>${escapeHtml(x.name)}</b></td><td>${x.scenarioCount}</td><td>${x.issues.map(i=>`<span class='pill warn'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">ok</span>'}</td><td>${x.sensitive.map(i=>`<span class='pill bad'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">keine Treffer</span>'}</td></tr>`).join('') || '<tr><td colspan="4">Keine Projekte vorhanden.</td></tr>'}
+    </tbody></table>
     <h3>Szenario-Prüfung</h3>
     <table><thead><tr><th>Szenario</th><th>Strukturhinweise</th><th>Sensibilitätsmuster</th></tr></thead><tbody>
-      ${scenarioChecks.map(x=>`<tr><td><b>${escapeHtml(x.name)}</b></td><td>${x.issues.map(i=>`<span class='pill warn'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">ok</span>'}</td><td>${x.sensitive.map(i=>`<span class='pill bad'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">keine Treffer</span>'}</td></tr>`).join('')}
+      ${scenarioChecks.map(x=>`<tr><td><b>${escapeHtml(x.name)}</b></td><td>${x.issues.map(i=>`<span class='pill warn'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">ok</span>'}</td><td>${x.sensitive.map(i=>`<span class='pill bad'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">keine Treffer</span>'}</td></tr>`).join('') || '<tr><td colspan="3">Keine Szenarien vorhanden.</td></tr>'}
     </tbody></table>
     <h3>Datenbank-Bereitschaft</h3>
     <ul>
-      <li>${scenarios.length ? 'Szenario-Bestand vorhanden.' : 'Noch keine Szenarien gespeichert.'}</li>
-      <li>${phaseSets.length ? 'Eigene Phasen-Sets vorhanden und separat migrierbar.' : 'Keine eigenen Phasen-Sets.'}</li>
-      <li>${cases.length ? 'Persönliche Beratungsfälle vorhanden; später getrennt von Szenarien modellieren.' : 'Keine Beratungsfälle.'}</li>
+      <li>${projects.length ? 'Projektstruktur vorhanden.' : 'Noch keine Projekte gespeichert.'}</li>
+      <li>${unassigned.length ? `${unassigned.length} Szenario(s) sind keinem Projekt zugeordnet.` : 'Alle Szenarien sind einem Projekt zugeordnet oder keine Szenarien vorhanden.'}</li>
+      <li>${phaseSets.length ? 'Eigene Phasen-Sets separat migrierbar.' : 'Keine eigenen Phasen-Sets.'}</li>
+      <li>${cases.length ? 'Persönliche Beratungsfälle vorhanden; später getrennt von Projekten/Szenarien modellieren.' : 'Keine Beratungsfälle.'}</li>
       <li>${issueCount ? 'Vor Datenbankmigration Hinweise prüfen, insbesondere personenbezogene Muster.' : 'Keine groben Struktur- oder Sensibilitätsprobleme erkannt.'}</li>
     </ul>`;
   document.getElementById('check').innerHTML=html;
   refreshPreview();
 }
-function dbPlan(){ return { version:'1.5-db-readiness', generatedAt:now(), recommendedTables:['users','projects','scenarios','scenario_versions','assumptions','personas','resources','interventions','strategies','phase_sets','scenario_phases','scenario_relations','consulting_cases','reports','imports','audit_log'], migrationOrder:['local backup export','schema create','users/projects seed','scenarios import','phase sets import','consulting cases import','reports/imports later','validation','read-only fallback keep local backup'], localKeys:KEYS, notes:['Szenarien sollten in Projekte eingeordnet werden.','Phasen und Beziehungen sollten Bestandteile der Szenarioakte werden.','Personenbezogene Inhalte vor Migration vermeiden oder bereinigen.'] }; }
+function dbPlan(){ return { version:'1.6-db-readiness', generatedAt:now(), recommendedTables:['users','projects','project_scenarios','scenarios','scenario_versions','assumptions','personas','resources','interventions','strategies','phase_sets','scenario_phases','scenario_relations','consulting_cases','reports','imports','audit_log'], migrationOrder:['local backup export','schema create','users seed','projects import','scenarios import','project_scenarios link table import','phase sets import','consulting cases import','reports/imports later','validation','read-only fallback keep local backup'], localKeys:KEYS, notes:['Projekte sind die fachliche Klammer vor der Datenbankmigration.','Szenarien sollten über project_scenarios zu Projekten verknüpft werden.','Phasen und Beziehungen sollten später Bestandteile der Szenarioakte werden.','Personenbezogene Inhalte vor Migration vermeiden oder bereinigen.'] }; }
 function downloadDbPlan(){ download('ki-kernel-db-migrationsplan.json', JSON.stringify(dbPlan(),null,2)); }
 function clearAllData(){ if(!confirm('Wirklich alle lokalen App-Daten löschen? Vorher Backup exportieren.')) return; Object.values(KEYS).forEach(k=>localStorage.removeItem(k)); refreshPreview(); renderCheck(); }
 refreshPreview(); renderCheck();
