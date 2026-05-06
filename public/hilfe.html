@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hilfe · KI-Kernel GPT</title>
+  <title>Hilfe · KI-Kernel GPT 0.7</title>
   <style>
     :root { color-scheme: light; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     body { margin: 0; background: #f1f5f9; color: #0f172a; line-height: 1.6; }
     header { background: #020617; color: white; padding: 48px 24px; }
-    main { max-width: 1100px; margin: 0 auto; padding: 24px; }
-    .hero { max-width: 1100px; margin: 0 auto; }
+    main { max-width: 1120px; margin: 0 auto; padding: 24px; }
+    .hero { max-width: 1120px; margin: 0 auto; }
     .badge { display: inline-block; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 6px 12px; color: #cbd5e1; font-size: 14px; }
     h1 { font-size: clamp(32px, 6vw, 56px); line-height: 1.05; margin: 18px 0 12px; }
     h2 { font-size: 26px; margin: 0 0 12px; }
@@ -33,9 +33,9 @@
 <body>
   <header>
     <div class="hero">
-      <span class="badge">Hilfe und Anleitung</span>
-      <h1>KI-Kernel GPT bedienen</h1>
-      <p>Kurzanleitung für die Nutzung der Organisationssimulation, des Ressourcenmodells, der Persona-Steuerung und des Beratungsreports.</p>
+      <span class="badge">Hilfe und Anleitung · KI-Kernel GPT 0.7</span>
+      <h1>Geführte Szenariomodellierung bedienen</h1>
+      <p>Die App unterstützt dich beim Modellieren, Simulieren, Speichern und Vergleichen von Organisationsszenarien. Version 0.7 enthält sechs Standardszenarien, Import Light, geführte Menüs, Slider mit überschreibbaren Subtexten, Report, Speicher und Vergleich.</p>
       <a class="toplink" href="/">Zur App</a>
     </div>
   </header>
@@ -43,58 +43,90 @@
   <main>
     <section class="card warn">
       <h2>Wichtiges Grundverständnis</h2>
-      <p>Die App liefert keine empirische Organisationsdiagnose. Sie erzeugt plausible Hypothesen auf Basis deiner Eingaben. Ergebnisse müssen mit realen Beteiligten validiert werden.</p>
-      <p>Verwende keine echten Namen und keine personenbezogenen Profile. Arbeite mit Rollen, Archetypen und anonymisierten Stakeholdern.</p>
+      <p>Die App liefert keine empirische Organisationsdiagnose. Sie macht Annahmen, Zielkonflikte, Risiken, Ressourcen, Interventionen und mögliche nächste Schritte sichtbar.</p>
+      <p>Arbeite mit Rollen, Archetypen und anonymisierten Stakeholdern. Verwende keine echten Namen, keine personenbezogenen Profile und keine verdeckte Leistungs- oder Konfliktbewertung.</p>
     </section>
 
     <section class="card">
-      <h2>Schnellstart in 7 Schritten</h2>
+      <h2>Hauptbereiche der App</h2>
+      <table>
+        <thead><tr><th>Reiter</th><th>Zweck</th></tr></thead>
+        <tbody>
+          <tr><td>Dashboard</td><td>Verdichtete Auswertung zu Akzeptanz, Governance, Ressourcen, Lernfähigkeit und Restrisiko.</td></tr>
+          <tr><td>Vorlagen</td><td>Sechs Standardszenarien laden und als Arbeitsgrundlage verwenden.</td></tr>
+          <tr><td>Import</td><td>Konzepttext einfügen oder TXT/MD/JSON-Datei hochladen und daraus einen prüfbaren Szenarioentwurf erzeugen.</td></tr>
+          <tr><td>Ausgangslage</td><td>Titel, Domäne, Entscheidungsfrage, Ziel und Grenzen des Szenarios bearbeiten.</td></tr>
+          <tr><td>Annahmen</td><td>Hypothesen mit Evidenz, Unsicherheit, Sensibilität und Status modellieren.</td></tr>
+          <tr><td>Personas</td><td>Stakeholderrollen mit Menüs, Slidern und überschreibbaren Subtexten bearbeiten.</td></tr>
+          <tr><td>Ressourcen</td><td>Systemressourcen wie Vertrauen, Klarheit, Zeitdruck, Konfliktspannung und psychologische Sicherheit modellieren.</td></tr>
+          <tr><td>Interventionen</td><td>Maßnahmen mit Zeitpunkt, Nutzen, Nebenwirkung und Aufwand planen.</td></tr>
+          <tr><td>Strategien</td><td>Vorgehensoptionen anhand Tempo, Akzeptanz, Kontrolle, Innovation und Risiko vergleichen.</td></tr>
+          <tr><td>Report</td><td>Lokalen Kurzreport oder GPT-Report erzeugen und kopieren.</td></tr>
+          <tr><td>Speicher</td><td>Szenarien lokal im Browser speichern, laden, duplizieren und löschen.</td></tr>
+          <tr><td>Vergleich</td><td>Zwei gespeicherte Szenarien anhand zentraler Kennzahlen vergleichen.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Standardszenarien</h2>
+      <p>Im Reiter <strong>Vorlagen</strong> stehen sechs Demos bereit:</p>
       <ol>
-        <li><strong>Ausgangslage:</strong> Beschreibe Vorhaben, Ziel und Entscheidungsfrage.</li>
-        <li><strong>Annahmen:</strong> Markiere Vermutungen mit Evidenz, Unsicherheit und Sensibilität.</li>
-        <li><strong>Personas:</strong> Wähle Rollen-Vorlagen und passe Einfluss, Betroffenheit, Haltung und Trigger an.</li>
-        <li><strong>Ressourcen:</strong> Bewerte Vertrauen, Klarheit, Zeitdruck, Konfliktspannung und weitere Systemressourcen.</li>
-        <li><strong>Interventionen:</strong> Plane Maßnahmen mit Nutzen, Nebenwirkungen und Aufwand.</li>
-        <li><strong>Strategien:</strong> Vergleiche Vorgehensweisen wie Governance-first, Pilot-first oder Top-down.</li>
-        <li><strong>Report:</strong> Erzeuge den lokalen Report oder starte den GPT-Report über das Backend.</li>
+        <li><strong>Stille Gruppe im KI-Workshop</strong> – Beteiligung, Hierarchie, psychologische Sicherheit.</li>
+        <li><strong>Polarisierte Gruppe bei KI-Einführung</strong> – Treiber, Skeptiker, Schutzlogik, Governance.</li>
+        <li><strong>Heterogene Lerngruppe in digitaler Unterrichtssequenz</strong> – Differenzierung, Lernmotivation, Fehlerangst.</li>
+        <li><strong>BvB-Digitalisierung als neues Angebot</strong> – Zielgruppenbedarf, Budget, Pilotfähigkeit, Wirkung.</li>
+        <li><strong>Team in der Stormingphase</strong> – Rollenklärung, informelle Macht, Konfliktspannung.</li>
+        <li><strong>MAV-Beteiligung bei Personalführung rechtssicher gestalten</strong> – Führung, MAV, Dokumentation, Fristen, Governance.</li>
+      </ol>
+      <p>Eine Vorlage ersetzt das aktuelle Szenario und springt anschließend in den Reiter <strong>Ausgangslage</strong>. Dort kannst du sie weiterbearbeiten.</p>
+    </section>
+
+    <section class="card">
+      <h2>Schnellstart in 8 Schritten</h2>
+      <ol>
+        <li>Öffne <strong>Vorlagen</strong> und lade ein Standardszenario oder starte über <strong>Import</strong>.</li>
+        <li>Prüfe unter <strong>Ausgangslage</strong> Entscheidungsfrage, Ziel und Grenzen.</li>
+        <li>Bearbeite unter <strong>Annahmen</strong> Evidenz, Unsicherheit, Sensibilität und Status.</li>
+        <li>Passe unter <strong>Personas</strong> Rollen, Haltung, Einfluss, Vertrauen, KI-Kompetenz und Veränderungsenergie an.</li>
+        <li>Modelliere unter <strong>Ressourcen</strong> aktuelle Lage, Zielwert, Trend und Engpässe.</li>
+        <li>Plane unter <strong>Interventionen</strong> Zeitpunkt, Nutzen, Nebenwirkungen und Aufwand.</li>
+        <li>Vergleiche unter <strong>Strategien</strong> unterschiedliche Vorgehensweisen.</li>
+        <li>Erzeuge im <strong>Report</strong> eine Beratungsauswertung und speichere das Szenario unter <strong>Speicher</strong>.</li>
       </ol>
     </section>
 
     <section class="grid">
       <div class="card">
-        <h2>1. Ausgangslage</h2>
-        <p>Die Entscheidungsfrage ist der wichtigste Eingabepunkt. Sie sollte konkret sein.</p>
-        <p><strong>Gut:</strong> Wie kann die KI-Richtlinie eingeführt werden, ohne Beteiligung und Datenschutz zu vernachlässigen?</p>
-        <p><strong>Schwach:</strong> Was passiert bei KI?</p>
+        <h2>Menüs und Subtexte</h2>
+        <p>Viele Felder haben jetzt Auswahlmenüs. Wenn du einen Menüwert änderst, erzeugt die App automatisch einen kurzen Erklärungstext.</p>
+        <p>Diese Erklärungstexte sind keine festen Wahrheiten. Du kannst sie jederzeit überschreiben.</p>
       </div>
-
       <div class="card">
-        <h2>2. Annahmen</h2>
-        <p>Annahmen sind keine Fakten. Sie beschreiben, was du vermutest.</p>
-        <ul>
-          <li><strong>Evidenz niedrig:</strong> kaum belegt</li>
-          <li><strong>Evidenz mittel:</strong> plausibel, aber prüfbedürftig</li>
-          <li><strong>Evidenz hoch:</strong> gut beobachtet oder belegt</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h2>3. Personas</h2>
-        <p>Personas sind Rollenmodelle, keine echten Menschen.</p>
-        <p>Nutze Vorlagen wie skeptische Fachkraft, Datenschutzrolle, MAV, QM oder Teamleitung.</p>
-      </div>
-
-      <div class="card">
-        <h2>4. Ressourcen</h2>
-        <p>Ressourcen zeigen, was den Prozess trägt oder destabilisiert.</p>
-        <p>Typische Kipppunkte: sinkendes Vertrauen, steigender Zeitdruck, fallende Aufmerksamkeit, fehlende psychologische Sicherheit.</p>
+        <h2>Slider richtig nutzen</h2>
+        <p>Slider haben Werte von 1 bis 5. Der Zahlenwert verdichtet die Einschätzung; der Subtext erklärt die Bedeutung.</p>
+        <p>Seit Version 0.7 werden Sliderwert und Subtext gemeinsam gespeichert. Der Regler sollte daher sichtbar mitwandern.</p>
       </div>
     </section>
 
     <section class="card">
-      <h2>Persona-Eingabe richtig nutzen</h2>
+      <h2>Annahmen</h2>
       <table>
         <thead><tr><th>Feld</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td>Evidenz</td><td>Wie gut ist die Annahme belegt?</td></tr>
+          <tr><td>Unsicherheit</td><td>Wie stark hängt die Simulation von dieser Annahme ab?</td></tr>
+          <tr><td>Sensibilität</td><td>Wie vorsichtig muss die Information behandelt werden?</td></tr>
+          <tr><td>Status</td><td>Ist die Aussage explizit genannt, abgeleitet oder eine Hypothese?</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Personas</h2>
+      <p>Personas sind Rollenmodelle, keine echten Personen. Die App arbeitet mit Einflussprofilen, damit Stakeholderdynamiken sichtbar werden.</p>
+      <table>
+        <thead><tr><th>Slider</th><th>Bedeutung</th></tr></thead>
         <tbody>
           <tr><td>Einfluss</td><td>Wie stark prägt die Rolle Entscheidungen oder Stimmung?</td></tr>
           <tr><td>Betroffenheit</td><td>Wie stark ist die Rolle von der Veränderung betroffen?</td></tr>
@@ -107,19 +139,29 @@
     </section>
 
     <section class="card">
-      <h2>Strategien bewerten</h2>
-      <p>Die Werte 1–5 sind nur eine Verdichtung. Entscheidend sind die Begründungstexte.</p>
-      <ul>
-        <li><strong>Tempo:</strong> Wie schnell kommt die Organisation ins Handeln?</li>
-        <li><strong>Akzeptanz:</strong> Wie wahrscheinlich wird das Vorgehen mitgetragen?</li>
-        <li><strong>Kontrolle:</strong> Wie gut sind Datenschutz, Qualität und Governance steuerbar?</li>
-        <li><strong>Innovation:</strong> Wie viel Lernen und Erprobung wird ermöglicht?</li>
-        <li><strong>Risiko:</strong> Welche Nebenwirkungen, Widerstände oder Schutzrisiken entstehen?</li>
-      </ul>
+      <h2>Ressourcen</h2>
+      <p>Ressourcen beschreiben den Systemzustand. Beispiele: Vertrauen, Klarheit, Aufmerksamkeit, psychologische Sicherheit, Zeitdruck, Konfliktspannung, Rechtssicherheit, Budgetdruck.</p>
+      <p><strong>Logik high_good:</strong> Hohe Werte sind gut, z. B. Vertrauen oder Klarheit.</p>
+      <p><strong>Logik low_good:</strong> Niedrige Werte sind gut, z. B. Zeitdruck oder Konfliktspannung.</p>
     </section>
 
     <section class="card">
-      <h2>Der 14-teilige Report</h2>
+      <h2>Import Light</h2>
+      <p>Du kannst Konzepttext einfügen oder eine Textdatei hochladen. Unterstützt sind aktuell:</p>
+      <ul>
+        <li>TXT</li>
+        <li>Markdown</li>
+        <li>JSON</li>
+        <li>reine Textdateien bis 1 MB</li>
+      </ul>
+      <p>DOCX und PDF sind noch nicht aktiv. Dafür braucht die App eine serverseitige Textextraktion.</p>
+      <p>Der Import überschreibt das Szenario nicht sofort. Erst wenn du den Entwurf übernimmst, wird er zum aktuellen Szenario.</p>
+    </section>
+
+    <section class="card">
+      <h2>Report</h2>
+      <p>Der lokale Report funktioniert ohne API. Der GPT-Report nutzt das Backend und deinen OpenAI-API-Key.</p>
+      <p>Der GPT-Report folgt dieser Struktur:</p>
       <ol>
         <li>Executive Summary</li>
         <li>Ausgangslage</li>
@@ -149,7 +191,6 @@
           <li>personenbezogene Diagnosen</li>
         </ul>
       </div>
-
       <div class="card ok">
         <h2>Geeignet für</h2>
         <ul>
@@ -157,24 +198,20 @@
           <li>KI-Readiness-Reflexion</li>
           <li>Beteiligungsprozesse</li>
           <li>Change-Risikoanalyse</li>
-          <li>anonymisierte Szenarien</li>
+          <li>anonymisierte Organisationsszenarien</li>
         </ul>
       </div>
     </section>
 
     <section class="card">
       <h2>Fehlerhilfe</h2>
+      <h3>Slider bewegt sich nicht</h3>
+      <p>Stelle sicher, dass Version 0.7 geladen ist. Nach einem Redeploy Browser hart neu laden oder privates Fenster öffnen.</p>
       <h3>429 insufficient_quota</h3>
       <p>Dein OpenAI-API-Konto hat kein verfügbares Guthaben oder ein Limit ist erreicht. Prüfe Billing und Limits in der OpenAI Platform.</p>
-
       <h3>OPENAI_API_KEY fehlt</h3>
       <p>Setze in Coolify unter Environment Variables:</p>
       <pre>OPENAI_API_KEY=sk-...</pre>
-      <p>Danach neu deployen.</p>
-
-      <h3>Backend nicht erreichbar</h3>
-      <p>Prüfe Coolify Logs, Port 3000, Environment Variables und ob der Container läuft.</p>
-
       <h3>Healthcheck</h3>
       <p>Öffne:</p>
       <pre>/api/health</pre>
@@ -183,7 +220,7 @@
 
     <section class="card">
       <h2>Merksatz</h2>
-      <p><strong>Die App liefert keine Wahrheit. Sie macht Annahmen, Zielkonflikte, Risiken, Ressourcen und mögliche nächste Schritte sichtbar.</strong></p>
+      <p><strong>Die App ist kein Diagnoseautomat. Sie ist ein Werkzeug, um Annahmen prüfbar, Entscheidungen nachvollziehbar und Interventionen verantwortbarer zu machen.</strong></p>
       <p><a href="/">Zurück zur App</a></p>
     </section>
   </main>
