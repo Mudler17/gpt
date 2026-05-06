@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DB-Setup · KI-Kernel GPT 1.9</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a;background:#f1f5f9}body{margin:0;background:#f1f5f9;line-height:1.55}header{background:#020617;color:white;padding:42px 24px}main{max-width:1240px;margin:0 auto;padding:24px}.hero{max-width:1240px;margin:0 auto}h1{font-size:clamp(30px,5vw,52px);line-height:1.05;margin:12px 0}h2{font-size:24px;margin:0 0 12px}h3{font-size:18px;margin:18px 0 8px}.badge{display:inline-block;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 12px;color:#cbd5e1;font-size:14px}.btn,button{appearance:none;border:1px solid #cbd5e1;border-radius:14px;padding:10px 14px;background:white;color:#0f172a;font-weight:900;cursor:pointer;text-decoration:none;display:inline-block}.primary{background:#020617;color:white;border-color:#020617}.card{background:white;border:1px solid #e2e8f0;border-radius:22px;padding:22px;box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}label{display:block;font-weight:800;font-size:14px;color:#334155;margin-bottom:6px}select,textarea,input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:14px;padding:10px 12px;font:inherit;background:white}textarea{min-height:160px}.muted{color:#64748b;font-size:14px}.pill{display:inline-block;border-radius:999px;border:1px solid #e2e8f0;background:#f8fafc;padding:5px 10px;margin:2px;font-size:12px;font-weight:800}.ok{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fffbeb;border-color:#fde68a}.bad{background:#fff1f2;border-color:#fecdd3}.info{background:#eff6ff;border-color:#bfdbfe}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}th{background:#f8fafc}pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:18px;padding:18px;overflow:auto;max-height:520px}code{background:#e2e8f0;border-radius:8px;padding:2px 6px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="badge">KI-Kernel GPT 1.9 · DB-Setup und Backup-Import vorbereiten</span>
+    <h1>Datenbankmigration kontrolliert vorbereiten</h1>
+    <p>Diese Seite prüft Umgebung, Backup-Dateien und Migrationsreife. Sie schreibt noch nichts in PostgreSQL. Der produktive Import folgt erst nach bewusstem Setup.</p>
+    <p><a class="btn" href="/">Zur App</a> <a class="btn" href="/backup.html">Backup</a> <a class="btn" href="/projekte.html">Projektakte</a></p>
+  </div>
+</header>
+<main>
+  <section class="card warn">
+    <h2>Sicherheitslogik</h2>
+    <p>Solange <code>STORAGE_MODE=local</code> gesetzt ist, bleibt der Browser-Speicher Hauptspeicher. Die Datenbank darf vorbereitet sein, wird aber nicht aktiv genutzt. Genau dieser Zustand ist vor einer Migration richtig.</p>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>1. Systemstatus</h2>
+      <p class="muted">Liest <code>/api/health</code> und bewertet den Migrationsstand.</p>
+      <button class="primary" onclick="loadHealth()">Status prüfen</button>
+      <div id="health" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <h2>2. Nächste Coolify-Schritte</h2>
+      <ol>
+        <li>PostgreSQL-Resource ist angelegt.</li>
+        <li><code>DATABASE_URL</code> ist bei der App gesetzt.</li>
+        <li><code>STORAGE_MODE=local</code> bleibt gesetzt.</li>
+        <li>App ist redeployed.</li>
+        <li>Diese Seite zeigt <code>databaseConfigured: true</code>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>3. Backup-Datei prüfen</h2>
+    <p class="muted">Lade ein Vollbackup aus Backup 1.6 hoch. Die Datei wird nur lokal im Browser geprüft.</p>
+    <div class="grid">
+      <div><label>Backup-JSON</label><input id="backupFile" type="file" accept=".json,application/json" /></div>
+      <div><label>Zielmodus</label><select id="targetMode"><option value="dry-run">Nur prüfen / Dry Run</option><option value="planned-import">Import vorbereiten</option></select></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="primary" onclick="analyzeBackup()">Backup analysieren</button>
+      <button onclick="downloadImportPlan()">Importplan herunterladen</button>
+    </div>
+    <div id="backupAnalysis" style="margin-top:16px"></div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>4. DB-Migrationsbefehle</h2>
+      <p class="muted">Erst ausführen, wenn Prisma Client im Container korrekt generiert werden kann.</p>
+      <pre>npm run db:generate
+npm run db:migrate:deploy</pre>
+      <p>Falls Coolify ein Terminal für die App anbietet, dort ausführen. Alternativ als einmaliger Job oder später über einen kontrollierten Setup-Endpunkt.</p>
+    </div>
+    <div class="card">
+      <h2>5. Import-Reihenfolge</h2>
+      <ol>
+        <li>Default-User erzeugen</li>
+        <li>Projekte importieren</li>
+        <li>Szenarien importieren</li>
+        <li>Projekt-Szenario-Zuordnungen schreiben</li>
+        <li>Phasen-Sets importieren</li>
+        <li>Beratungsfälle importieren</li>
+        <li>Importe/Reports nachrangig importieren</li>
+        <li>Audit-Log schreiben</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>6. Migrationsreife</h2>
+    <div id="readiness"></div>
+  </section>
+
+  <section class="card">
+    <h2>7. Technischer Importplan</h2>
+    <pre id="plan"></pre>
+  </section>
+</main>
+<script>
+let lastHealth=null;
+let lastBackup=null;
+let lastPlan=null;
+function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
+function pill(text,tone='info'){return `<span class="pill ${tone}">${esc(text)}</span>`;}
+async function loadHealth(){
+  const el=document.getElementById('health');
+  try{
+    const res=await fetch('/api/health',{cache:'no-store'});
+    const data=await res.json();
+    lastHealth=data;
+    el.innerHTML=`<div>${pill('ok: '+data.ok, data.ok?'ok':'bad')} ${pill('appVersion: '+data.appVersion,'info')} ${pill('storageMode: '+data.storageMode, data.storageMode==='local'?'ok':'warn')}</div>
+    <div style="margin-top:8px">${pill('OpenAI: '+data.openaiConfigured, data.openaiConfigured?'ok':'bad')} ${pill('DB konfiguriert: '+data.databaseConfigured, data.databaseConfigured?'ok':'warn')} ${pill('DB aktiv: '+data.databaseActive, data.databaseActive?'warn':'ok')} ${pill('DB erreichbar: '+data.databaseReachable, data.databaseReachable===true?'ok':data.databaseReachable===false?'bad':'info')}</div>
+    <p class="muted">${esc(data.databaseReachableNote||'')}</p>`;
+    renderReadiness();
+  }catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}
+}
+function normalizeBackup(obj){ if(obj?.schema==='ki-kernel-local-backup') return obj.data||{}; if(obj?.data) return obj.data; return obj||{}; }
+async function analyzeBackup(){
+  const file=document.getElementById('backupFile').files[0];
+  const el=document.getElementById('backupAnalysis');
+  if(!file){el.innerHTML=pill('Keine Datei gewählt','bad');return;}
+  try{
+    const raw=JSON.parse(await file.text());
+    const data=normalizeBackup(raw);
+    lastBackup={raw,data};
+    const projects=Array.isArray(data.projects)?data.projects:[];
+    const scenarios=Array.isArray(data.scenarios)?data.scenarios:[];
+    const phaseSets=Array.isArray(data.phaseSets)?data.phaseSets:[];
+    const cases=Array.isArray(data.consultingCases)?data.consultingCases:[];
+    const missingRefs=projects.flatMap(p=>(Array.isArray(p.scenarioIds)?p.scenarioIds:[]).filter(id=>!scenarios.find(s=>s.id===id)).map(id=>({project:p.title,id})));
+    const unassigned=scenarios.filter(s=>!projects.some(p=>Array.isArray(p.scenarioIds)&&p.scenarioIds.includes(s.id)));
+    const sensitive=detectSensitive(JSON.stringify(data));
+    el.innerHTML=`<div>${pill('Projekte: '+projects.length, projects.length?'ok':'warn')} ${pill('Szenarien: '+scenarios.length, scenarios.length?'ok':'warn')} ${pill('Phasen-Sets: '+phaseSets.length, phaseSets.length?'ok':'info')} ${pill('Beratungsfälle: '+cases.length, cases.length?'ok':'info')}</div>
+    <div style="margin-top:8px">${pill('fehlende Verweise: '+missingRefs.length, missingRefs.length?'bad':'ok')} ${pill('nicht zugeordnete Szenarien: '+unassigned.length, unassigned.length?'warn':'ok')} ${pill('Sensibilitätsmuster: '+sensitive.length, sensitive.length?'bad':'ok')}</div>
+    ${sensitive.length?`<h3>Sensibilitätsmuster</h3><p>${sensitive.map(x=>pill(x,'bad')).join('')}</p>`:''}
+    ${missingRefs.length?`<h3>Fehlende Szenario-Verweise</h3><ul>${missingRefs.map(x=>`<li>${esc(x.project)} → ${esc(x.id)}</li>`).join('')}</ul>`:''}`;
+    buildPlan(); renderReadiness();
+  }catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}
+}
+function detectSensitive(text){const hits=[]; if(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text)) hits.push('E-Mail-Adressen'); if(/\b(?:\+49|0)[\d\s\-\/]{7,}\b/.test(text)) hits.push('Telefonnummern'); if(/\b\d{5}\s+[A-ZÄÖÜ][a-zäöüß]+\b/.test(text)) hits.push('Adress-/PLZ-Muster'); if(/\b(?:Klient|Klientin|Patient|Patientin|Bewohner|Bewohnerin)\b/i.test(text)) hits.push('Klienten-/Patientenkontext'); return [...new Set(hits)];}
+function buildPlan(){
+  const data=lastBackup?.data||{};
+  const projects=Array.isArray(data.projects)?data.projects:[];
+  const scenarios=Array.isArray(data.scenarios)?data.scenarios:[];
+  const phaseSets=Array.isArray(data.phaseSets)?data.phaseSets:[];
+  const cases=Array.isArray(data.consultingCases)?data.consultingCases:[];
+  lastPlan={schema:'ki-kernel-db-import-plan',version:'1.9',createdAt:new Date().toISOString(),mode:document.getElementById('targetMode').value,health:lastHealth,counts:{projects:projects.length,scenarios:scenarios.length,phaseSets:phaseSets.length,consultingCases:cases.length},steps:['create default user','import projects','import scenarios with scenario_versions.state_json','create project_scenarios links','import phase_sets','import consulting_cases','write audit_log'],warnings:['Vor echtem Import Vollbackup archivieren.','Personenbezogene Inhalte vorher bereinigen.','STORAGE_MODE erst nach erfolgreichem Import auf hybrid setzen.']};
+  document.getElementById('plan').textContent=JSON.stringify(lastPlan,null,2);
+}
+function renderReadiness(){
+  const issues=[];
+  if(!lastHealth) issues.push('Systemstatus noch nicht geprüft.');
+  if(lastHealth && !lastHealth.databaseConfigured) issues.push('DATABASE_URL ist nicht gesetzt.');
+  if(lastHealth && lastHealth.storageMode!=='local') issues.push('Für Vorbereitung sollte STORAGE_MODE=local bleiben.');
+  if(!lastBackup) issues.push('Backup wurde noch nicht analysiert.');
+  const sensitive=lastBackup?detectSensitive(JSON.stringify(lastBackup.data)):[];
+  if(sensitive.length) issues.push('Backup enthält mögliche sensible Inhalte: '+sensitive.join(', '));
+  const ok=!issues.length;
+  document.getElementById('readiness').innerHTML=`<div>${pill(ok?'vorbereitend migrationsreif':'noch nicht migrationsreif', ok?'ok':'warn')}</div><ul>${(issues.length?issues:['Nächster Schritt: Prisma Generate/Migration im Container prüfen.']).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
+}
+function downloadImportPlan(){ if(!lastPlan) buildPlan(); const blob=new Blob([JSON.stringify(lastPlan,null,2)],{type:'application/json;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ki-kernel-db-importplan-1-9.json'; a.click(); URL.revokeObjectURL(a.href); }
+loadHealth();
+</script>
+</body>
+</html>
