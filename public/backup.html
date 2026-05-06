@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Backup · KI-Kernel GPT 1.5</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
+    body { margin:0; background:#f1f5f9; line-height:1.55; }
+    header { background:#020617; color:white; padding:42px 24px; }
+    main { max-width:1220px; margin:0 auto; padding:24px; }
+    .hero { max-width:1220px; margin:0 auto; }
+    h1 { font-size:clamp(30px,5vw,52px); line-height:1.05; margin:12px 0; }
+    h2 { font-size:24px; margin:0 0 12px; }
+    h3 { font-size:18px; margin:18px 0 8px; }
+    .badge { display:inline-block; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 12px; color:#cbd5e1; font-size:14px; }
+    .btn, button { appearance:none; border:1px solid #cbd5e1; border-radius:14px; padding:10px 14px; background:white; color:#0f172a; font-weight:900; cursor:pointer; text-decoration:none; display:inline-block; }
+    .primary { background:#020617; color:white; border-color:#020617; }
+    .dangerBtn { background:#be123c; color:white; border-color:#be123c; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:22px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,.05); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+    label { display:block; font-weight:800; font-size:14px; color:#334155; margin-bottom:6px; }
+    select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font:inherit; background:white; }
+    textarea { min-height:160px; }
+    .muted { color:#64748b; font-size:14px; }
+    .pill { display:inline-block; border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc; padding:5px 10px; margin:2px; font-size:12px; font-weight:800; }
+    .ok { background:#ecfdf5; border-color:#bbf7d0; }
+    .warn { background:#fffbeb; border-color:#fde68a; }
+    .bad { background:#fff1f2; border-color:#fecdd3; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { border-bottom:1px solid #e2e8f0; padding:10px; text-align:left; vertical-align:top; }
+    th { background:#f8fafc; }
+    pre { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:18px; padding:18px; overflow:auto; max-height:520px; }
+    code { background:#e2e8f0; border-radius:8px; padding:2px 6px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="badge">KI-Kernel GPT 1.5 · Backup und Datenmodell-Check</span>
+    <h1>Lokale Daten sichern, prüfen und wiederherstellen</h1>
+    <p>Diese Seite exportiert und importiert die LocalStorage-Daten der App. Sie dient als Sicherheitsnetz vor einer späteren Datenbankmigration.</p>
+    <p><a class="btn" href="/">Zur App</a> <a class="btn" href="/hilfe.html">Hilfe</a></p>
+  </div>
+</header>
+<main>
+  <section class="card warn">
+    <h2>Wichtig</h2>
+    <p>Alle Daten liegen aktuell lokal im Browser. Exportiere vor größeren Änderungen ein vollständiges Backup. Import kann vorhandene Daten überschreiben, wenn du die entsprechende Option wählst.</p>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>1. Vollbackup exportieren</h2>
+      <p class="muted">Enthält Szenarien, Phasen-Sets, Beratungsfälle und Import+-Entwürfe.</p>
+      <button class="primary" onclick="downloadFullBackup()">Vollbackup herunterladen</button>
+      <button onclick="copyFullBackup()">Vollbackup kopieren</button>
+    </div>
+    <div class="card">
+      <h2>2. Teildaten exportieren</h2>
+      <p class="muted">Für gezielte Sicherungen oder spätere Tests.</p>
+      <p><button onclick="downloadKey('ki-kernel-szenarien-v8','szenarien-backup.json')">Szenarien exportieren</button></p>
+      <p><button onclick="downloadKey('ki-kernel-phase-sets-v1','phasen-sets-backup.json')">Phasen-Sets exportieren</button></p>
+      <p><button onclick="downloadKey('ki-kernel-personal-consulting-cases-v1','beratungsfaelle-backup.json')">Beratungsfälle exportieren</button></p>
+      <p><button onclick="downloadKey('ki-kernel-import-plus-drafts','import-entwuerfe-backup.json')">Import-Entwürfe exportieren</button></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>3. Backup importieren</h2>
+    <div class="grid">
+      <div><label>JSON-Datei</label><input id="file" type="file" accept=".json,application/json" /></div>
+      <div><label>Importmodus</label><select id="mode"><option value="merge">Zusammenführen, vorhandene Daten behalten</option><option value="replace">Ersetzen, vorhandene App-Daten überschreiben</option></select></div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button onclick="previewImport()">Import prüfen</button>
+      <button class="primary" onclick="runImport()">Import ausführen</button>
+    </div>
+    <div id="importStatus" class="muted" style="margin-top:12px;">Noch kein Import geprüft.</div>
+  </section>
+
+  <section class="card">
+    <h2>4. Datenmodell-Check</h2>
+    <p class="muted">Prüft grob Vollständigkeit, Zählwerte, mögliche personenbezogene Muster und Datenbank-Bereitschaft.</p>
+    <button class="primary" onclick="renderCheck()">Datenmodell prüfen</button>
+    <button onclick="downloadDbPlan()">DB-Migrationsplan herunterladen</button>
+    <div id="check" style="margin-top:16px;"></div>
+  </section>
+
+  <section class="card">
+    <h2>5. Technische Vorschau</h2>
+    <p class="muted">Hier siehst du das aktuelle Vollbackup als JSON.</p>
+    <pre id="preview"></pre>
+  </section>
+
+  <section class="card bad">
+    <h2>Gefahrenbereich</h2>
+    <p>Nur nutzen, wenn du vorher ein Backup exportiert hast.</p>
+    <button class="dangerBtn" onclick="clearAllData()">Alle lokalen App-Daten löschen</button>
+  </section>
+</main>
+<script>
+const KEYS = {
+  scenarios: 'ki-kernel-szenarien-v8',
+  phaseSets: 'ki-kernel-phase-sets-v1',
+  consultingCases: 'ki-kernel-personal-consulting-cases-v1',
+  importDrafts: 'ki-kernel-import-plus-drafts'
+};
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function now(){ return new Date().toISOString(); }
+function parseKey(key){ try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } }
+function fullBackup(){ return { schema:'ki-kernel-local-backup', version:'1.5', exportedAt:now(), source:location.origin, data:{ scenarios:parseKey(KEYS.scenarios), phaseSets:parseKey(KEYS.phaseSets), consultingCases:parseKey(KEYS.consultingCases), importDrafts:parseKey(KEYS.importDrafts) } }; }
+function download(filename, text){ const blob=new Blob([text],{type:'application/json;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href); }
+function downloadFullBackup(){ download('ki-kernel-vollbackup-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(fullBackup(),null,2)); }
+function copyFullBackup(){ navigator.clipboard?.writeText(JSON.stringify(fullBackup(),null,2)); }
+function downloadKey(key, filename){ download(filename, JSON.stringify({ schema:'ki-kernel-partial-backup', key, exportedAt:now(), data:parseKey(key) }, null, 2)); }
+function refreshPreview(){ document.getElementById('preview').textContent = JSON.stringify(fullBackup(), null, 2); }
+function normalizeBackup(obj){
+  if(obj?.schema === 'ki-kernel-local-backup') return obj.data || {};
+  if(obj?.schema === 'ki-kernel-partial-backup' && obj.key) return { partialKey: obj.key, partialData: Array.isArray(obj.data) ? obj.data : [] };
+  if(obj?.data && (obj.data.scenarios || obj.data.phaseSets)) return obj.data;
+  if(Array.isArray(obj)) return { scenarios: obj };
+  return obj || {};
+}
+async function readImportFile(){ const f=document.getElementById('file').files[0]; if(!f) throw new Error('Keine Datei ausgewählt.'); return JSON.parse(await f.text()); }
+async function previewImport(){
+  try { const raw=await readImportFile(); const data=normalizeBackup(raw); document.getElementById('importStatus').innerHTML = '<span class="pill ok">Import lesbar</span> ' + summarizeData(data); }
+  catch(e){ document.getElementById('importStatus').innerHTML = '<span class="pill bad">Fehler</span> '+escapeHtml(e.message); }
+}
+async function runImport(){
+  try {
+    const raw=await readImportFile(); const data=normalizeBackup(raw); const mode=document.getElementById('mode').value;
+    if(mode==='replace' && !confirm('Vorhandene lokale App-Daten wirklich ersetzen? Vorher Backup exportiert?')) return;
+    if(data.partialKey){ const old=parseKey(data.partialKey); const next=mode==='replace'?data.partialData:mergeById(old,data.partialData); localStorage.setItem(data.partialKey, JSON.stringify(next)); }
+    else {
+      writeKey(KEYS.scenarios, data.scenarios, mode);
+      writeKey(KEYS.phaseSets, data.phaseSets, mode);
+      writeKey(KEYS.consultingCases, data.consultingCases, mode);
+      writeKey(KEYS.importDrafts, data.importDrafts, mode);
+    }
+    document.getElementById('importStatus').innerHTML='<span class="pill ok">Import ausgeführt</span> App bitte neu laden.'; refreshPreview(); renderCheck();
+  } catch(e){ document.getElementById('importStatus').innerHTML='<span class="pill bad">Fehler</span> '+escapeHtml(e.message); }
+}
+function writeKey(key, incoming, mode){ if(!Array.isArray(incoming)) return; const old=parseKey(key); const next=mode==='replace'?incoming:mergeById(old,incoming); localStorage.setItem(key, JSON.stringify(next)); }
+function mergeById(oldItems, newItems){ const map=new Map(); [...oldItems, ...newItems].forEach(item=>{ const id=item?.id || uid(); map.set(id, {...item,id}); }); return [...map.values()]; }
+function summarizeData(data){ if(data.partialKey) return `Teildaten: ${data.partialKey}, ${data.partialData?.length||0} Einträge`; return `Szenarien ${data.scenarios?.length||0}, Phasen-Sets ${data.phaseSets?.length||0}, Beratungsfälle ${data.consultingCases?.length||0}, Import-Entwürfe ${data.importDrafts?.length||0}`; }
+function escapeHtml(s){ return String(s||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
+function textOf(obj){ return JSON.stringify(obj||{}); }
+function detectSensitive(text){ const hits=[]; if(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text)) hits.push('E-Mail-Adressen'); if(/\b(?:\+49|0)[\d\s\-\/]{7,}\b/.test(text)) hits.push('Telefonnummern'); if(/\b\d{5}\s+[A-ZÄÖÜ][a-zäöüß]+\b/.test(text)) hits.push('Adresse/Postleitzahl-Muster'); if(/\b(?:Klient|Klientin|Patient|Patientin|Bewohner|Bewohnerin)\b/i.test(text)) hits.push('Hinweis auf Klienten-/Patientenkontext'); return [...new Set(hits)]; }
+function checkScenario(item){
+  const s=item.state||{}; const issues=[];
+  if(!s.context?.title) issues.push('Titel fehlt');
+  if(!s.context?.decisionQuestion) issues.push('Entscheidungsfrage fehlt');
+  if(!Array.isArray(s.assumptions) || !s.assumptions.length) issues.push('keine Annahmen');
+  if(!Array.isArray(s.personas) || !s.personas.length) issues.push('keine Personas');
+  if(!Array.isArray(s.resources) || !s.resources.length) issues.push('keine Ressourcen');
+  if(!Array.isArray(s.interventions) || !s.interventions.length) issues.push('keine Interventionen');
+  const sensitive=detectSensitive(textOf(s));
+  return { name:item.name || s.context?.title || 'ohne Name', issues, sensitive };
+}
+function renderCheck(){
+  const b=fullBackup(); const scenarios=b.data.scenarios||[]; const phaseSets=b.data.phaseSets||[]; const cases=b.data.consultingCases||[]; const drafts=b.data.importDrafts||[];
+  const scenarioChecks=scenarios.map(checkScenario);
+  const issueCount=scenarioChecks.reduce((sum,x)=>sum+x.issues.length+x.sensitive.length,0);
+  const html=`
+    <div class="grid">
+      <div class="card ${scenarios.length?'ok':'warn'}"><h3>Szenarien</h3><p>${scenarios.length}</p></div>
+      <div class="card ${phaseSets.length?'ok':'warn'}"><h3>Eigene Phasen-Sets</h3><p>${phaseSets.length}</p></div>
+      <div class="card ${cases.length?'ok':'warn'}"><h3>Beratungsfälle</h3><p>${cases.length}</p></div>
+      <div class="card ${issueCount?'warn':'ok'}"><h3>Prüfhinweise</h3><p>${issueCount}</p></div>
+    </div>
+    <h3>Szenario-Prüfung</h3>
+    <table><thead><tr><th>Szenario</th><th>Strukturhinweise</th><th>Sensibilitätsmuster</th></tr></thead><tbody>
+      ${scenarioChecks.map(x=>`<tr><td><b>${escapeHtml(x.name)}</b></td><td>${x.issues.map(i=>`<span class='pill warn'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">ok</span>'}</td><td>${x.sensitive.map(i=>`<span class='pill bad'>${escapeHtml(i)}</span>`).join('') || '<span class="pill ok">keine Treffer</span>'}</td></tr>`).join('')}
+    </tbody></table>
+    <h3>Datenbank-Bereitschaft</h3>
+    <ul>
+      <li>${scenarios.length ? 'Szenario-Bestand vorhanden.' : 'Noch keine Szenarien gespeichert.'}</li>
+      <li>${phaseSets.length ? 'Eigene Phasen-Sets vorhanden und separat migrierbar.' : 'Keine eigenen Phasen-Sets.'}</li>
+      <li>${cases.length ? 'Persönliche Beratungsfälle vorhanden; später getrennt von Szenarien modellieren.' : 'Keine Beratungsfälle.'}</li>
+      <li>${issueCount ? 'Vor Datenbankmigration Hinweise prüfen, insbesondere personenbezogene Muster.' : 'Keine groben Struktur- oder Sensibilitätsprobleme erkannt.'}</li>
+    </ul>`;
+  document.getElementById('check').innerHTML=html;
+  refreshPreview();
+}
+function dbPlan(){ return { version:'1.5-db-readiness', generatedAt:now(), recommendedTables:['users','projects','scenarios','scenario_versions','assumptions','personas','resources','interventions','strategies','phase_sets','scenario_phases','scenario_relations','consulting_cases','reports','imports','audit_log'], migrationOrder:['local backup export','schema create','users/projects seed','scenarios import','phase sets import','consulting cases import','reports/imports later','validation','read-only fallback keep local backup'], localKeys:KEYS, notes:['Szenarien sollten in Projekte eingeordnet werden.','Phasen und Beziehungen sollten Bestandteile der Szenarioakte werden.','Personenbezogene Inhalte vor Migration vermeiden oder bereinigen.'] }; }
+function downloadDbPlan(){ download('ki-kernel-db-migrationsplan.json', JSON.stringify(dbPlan(),null,2)); }
+function clearAllData(){ if(!confirm('Wirklich alle lokalen App-Daten löschen? Vorher Backup exportieren.')) return; Object.values(KEYS).forEach(k=>localStorage.removeItem(k)); refreshPreview(); renderCheck(); }
+refreshPreview(); renderCheck();
+</script>
+</body>
+</html>
