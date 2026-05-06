@@ -5,17 +5,23 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
+    "build": "prisma generate && vite build",
     "start": "NODE_ENV=production node server.js",
-    "server": "node server.js"
+    "server": "node server.js",
+    "db:generate": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^6.18.0",
     "@vitejs/plugin-react": "^5.0.0",
     "express": "^4.19.2",
     "mammoth": "^1.8.0",
     "multer": "^1.4.5-lts.1",
     "openai": "^6.0.0",
     "pdf-parse": "^1.1.1",
+    "prisma": "^6.18.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite": "^7.0.0"
