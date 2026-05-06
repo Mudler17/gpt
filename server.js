@@ -55,22 +55,37 @@ const reportSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    executiveSummary: { type: "string" },
-    ausgangslage: { type: "string" },
-    simulationsannahmen: { type: "string" },
-    stakeholderanalyse: { type: "string" },
-    ressourcenRisikolage: { type: "string" },
-    phasenanalyse: { type: "string" },
-    konfliktKoalitionsmuster: { type: "string" },
-    kritischeKipppunkte: { type: "string" },
-    interventionsoptionen: { type: "string" },
-    entscheidungsmatrix: { type: "string" },
-    massnahmenplan: { type: "string" },
-    offeneFragen: { type: "string" },
-    governanceHinweise: { type: "string" },
-    grenzenDerSimulation: { type: "string" }
+    "Executive Summary": { type: "string" },
+    "Ausgangslage": { type: "string" },
+    "Simulationsannahmen": { type: "string" },
+    "Persona- und Stakeholderanalyse": { type: "string" },
+    "Ressourcen- und Risikolage": { type: "string" },
+    "Phasenanalyse": { type: "string" },
+    "Konflikt- und Koalitionsmuster": { type: "string" },
+    "Kritische Kipppunkte": { type: "string" },
+    "Interventionsoptionen": { type: "string" },
+    "Entscheidungsmatrix": { type: "string" },
+    "Maßnahmenplan": { type: "string" },
+    "Offene Fragen": { type: "string" },
+    "Datenschutz-/Governance-Hinweise": { type: "string" },
+    "Grenzen der Simulation": { type: "string" }
   },
-  required: ["executiveSummary", "ausgangslage", "simulationsannahmen", "stakeholderanalyse", "ressourcenRisikolage", "phasenanalyse", "konfliktKoalitionsmuster", "kritischeKipppunkte", "interventionsoptionen", "entscheidungsmatrix", "massnahmenplan", "offeneFragen", "governanceHinweise", "grenzenDerSimulation"]
+  required: [
+    "Executive Summary",
+    "Ausgangslage",
+    "Simulationsannahmen",
+    "Persona- und Stakeholderanalyse",
+    "Ressourcen- und Risikolage",
+    "Phasenanalyse",
+    "Konflikt- und Koalitionsmuster",
+    "Kritische Kipppunkte",
+    "Interventionsoptionen",
+    "Entscheidungsmatrix",
+    "Maßnahmenplan",
+    "Offene Fragen",
+    "Datenschutz-/Governance-Hinweise",
+    "Grenzen der Simulation"
+  ]
 };
 
 const scenarioSchema = {
@@ -154,7 +169,8 @@ app.post("/api/simulate", async (req, res) => {
           "Behandle alle Eingaben als Hypothesen, nicht als Tatsachendiagnose.",
           "Erzeuge keine personenbezogene Leistungs-, Verhaltens- oder Widerstandsdiagnostik.",
           "Arbeite mit Rollen, Archetypen und anonymisierten Stakeholdern.",
-          "Formuliere in deutscher Sprache, klar, beratungsfähig und entscheidungsorientiert."
+          "Formuliere in deutscher Sprache, klar, beratungsfähig und entscheidungsorientiert.",
+          "Nutze exakt die vorgegebenen deutschen Abschnittsüberschriften aus dem JSON Schema."
         ].join("\n") },
         { role: "user", content: "Erzeuge einen Beratungsreport nach dem vorgegebenen JSON Schema. Nutze diese Eingabedaten:\n\n" + JSON.stringify(state, null, 2) }
       ],
