@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import multer from "multer";
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse";
+import { dbStatus, ensureSchema, analyzeBackup, importBackup } from "./server-db-import.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,21 +23,6 @@ const STORAGE_MODE = process.env.STORAGE_MODE || "local";
 
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_BYTES } });
-let prisma = null;
-let prismaInitError = null;
-
-async function getPrisma() {
-  if (!DATABASE_URL) return null;
-  if (prisma) return prisma;
-  try {
-    const mod = await import("@prisma/client");
-    prisma = new mod.PrismaClient();
-    return prisma;
-  } catch (error) {
-    prismaInitError = error;
-    return null;
-  }
-}
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: MAX_REQUEST_BYTES }));
@@ -87,40 +73,29 @@ async function checkDatabase() {
       note: "Datenbankprüfung übersprungen, weil STORAGE_MODE=local. Die App nutzt weiterhin Browser-LocalStorage als Hauptspeicher."
     };
   }
-  if (!DATABASE_URL) {
-    return {
-      reachable: false,
-      active: false,
-      note: "DATABASE_URL ist nicht gesetzt. Für STORAGE_MODE=hybrid oder db ist eine Datenbank erforderlich."
-    };
-  }
-  const client = await getPrisma();
-  if (!client) {
-    return {
-      reachable: false,
-      active: true,
-      note: `Prisma konnte nicht initialisiert werden: ${String(prismaInitError?.message || prismaInitError || "unbekannter Fehler").slice(0, 500)}`
-    };
-  }
-  try {
-    await client.$queryRaw`SELECT 1`;
-    return { reachable: true, active: true, note: "Datenbankverbindung erfolgreich." };
-  } catch (error) {
-    return { reachable: false, active: true, note: String(error?.message || error).slice(0, 500) };
-  }
+  const status = await dbStatus();
+  return {
+    reachable: status.reachable,
+    active: true,
+    note: status.note,
+    tablesReady: status.tablesReady,
+    missingTables: status.missingTables || []
+  };
 }
 
 app.get("/api/health", async (_req, res) => {
   const db = await checkDatabase();
   res.json({
     ok: true,
-    appVersion: "1.8-local-safe-db-prepared",
+    appVersion: "2.0-controlled-db-import",
     model: OPENAI_MODEL,
     openaiConfigured: Boolean(OPENAI_API_KEY),
     databaseConfigured: Boolean(DATABASE_URL),
     databaseActive: db.active,
     databaseReachable: db.reachable,
     databaseReachableNote: db.note,
+    databaseTablesReady: db.tablesReady ?? null,
+    databaseMissingTables: db.missingTables ?? [],
     databaseUrlPreview: maskDatabaseUrl(DATABASE_URL),
     storageMode: STORAGE_MODE,
     allowedStorageModes: ["local", "hybrid", "db"],
@@ -128,6 +103,48 @@ app.get("/api/health", async (_req, res) => {
     maxUploadBytes: MAX_UPLOAD_BYTES,
     basicAuthEnabled: Boolean(BASIC_AUTH_USER && BASIC_AUTH_PASSWORD)
   });
+});
+
+app.get("/api/db/status", async (_req, res) => {
+  try {
+    const status = await dbStatus();
+    res.json({ ok: true, storageMode: STORAGE_MODE, ...status });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: String(error?.message || error) });
+  }
+});
+
+app.post("/api/db/ensure-schema", async (req, res) => {
+  try {
+    const confirmation = req.body?.confirmation;
+    if (confirmation !== "SCHEMA ANLEGEN") {
+      return res.status(400).json({ ok: false, error: "Bestätigungsphrase fehlt. Erforderlich: SCHEMA ANLEGEN" });
+    }
+    const status = await ensureSchema();
+    res.json({ ok: true, status });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: String(error?.message || error) });
+  }
+});
+
+app.post("/api/db/import-backup/dry-run", async (req, res) => {
+  try {
+    const analysis = analyzeBackup(req.body || {});
+    res.json({ ok: true, dryRun: true, analysis });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: String(error?.message || error) });
+  }
+});
+
+app.post("/api/db/import-backup", async (req, res) => {
+  try {
+    const { backup, confirmation } = req.body || {};
+    if (!backup) return res.status(400).json({ ok: false, error: "backup fehlt." });
+    const result = await importBackup(backup, { dryRun: false, confirmation });
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: String(error?.message || error) });
+  }
 });
 
 function fileExtension(name = "") {
@@ -187,11 +204,11 @@ const scenarioSchema = {
   additionalProperties: false,
   properties: {
     context: { type: "object", additionalProperties: false, properties: { title: { type: "string" }, domain: { type: "string" }, decisionQuestion: { type: "string" }, goal: { type: "string" }, boundaries: { type: "string" } }, required: ["title", "domain", "decisionQuestion", "goal", "boundaries"] },
-    assumptions: { type: "array", items: { type: "object", additionalProperties: false, properties: { text: { type: "string" }, source: { type: "string" }, evidence: { type: "string", enum: ["niedrig", "mittel", "hoch"] }, uncertainty: { type: "string", enum: ["niedrig", "mittel", "hoch"] }, sensitivity: { type: "string" }, sourceStatus: { type: "string", enum: ["explizit", "abgeleitet", "Hypothese"] }, sourceExcerpt: { type: "string" } }, required: ["text", "source", "evidence", "uncertainty", "sensitivity", "sourceStatus", "sourceExcerpt"] } },
-    personas: { type: "array", items: { type: "object", additionalProperties: false, properties: { name: { type: "string" }, role: { type: "string" }, stance: { type: "string" }, influence: { type: "integer", minimum: 1, maximum: 5 }, affectedness: { type: "integer", minimum: 1, maximum: 5 }, trust: { type: "integer", minimum: 1, maximum: 5 }, aiLiteracy: { type: "integer", minimum: 1, maximum: 5 }, riskSense: { type: "integer", minimum: 1, maximum: 5 }, changeEnergy: { type: "integer", minimum: 1, maximum: 5 }, informalRole: { type: "string" }, conflictStyle: { type: "string" }, trigger: { type: "string" }, learningNeed: { type: "string" }, communicationNeed: { type: "string" }, sourceStatus: { type: "string", enum: ["explizit", "abgeleitet", "Hypothese"] } }, required: ["name", "role", "stance", "influence", "affectedness", "trust", "aiLiteracy", "riskSense", "changeEnergy", "informalRole", "conflictStyle", "trigger", "learningNeed", "communicationNeed", "sourceStatus"] } },
-    resources: { type: "array", items: { type: "object", additionalProperties: false, properties: { name: { type: "string" }, type: { type: "string" }, current: { type: "integer", minimum: 1, maximum: 5 }, target: { type: "integer", minimum: 1, maximum: 5 }, direction: { type: "string", enum: ["high_good", "low_good"] }, trend: { type: "string" }, bottleneck: { type: "string" }, owner: { type: "string" }, sourceStatus: { type: "string", enum: ["explizit", "abgeleitet", "Hypothese"] } }, required: ["name", "type", "current", "target", "direction", "trend", "bottleneck", "owner", "sourceStatus"] } },
-    interventions: { type: "array", items: { type: "object", additionalProperties: false, properties: { name: { type: "string" }, timing: { type: "string" }, target: { type: "string" }, benefit: { type: "string" }, sideEffect: { type: "string" }, effort: { type: "string", enum: ["niedrig", "mittel", "hoch"] }, sourceStatus: { type: "string", enum: ["explizit", "abgeleitet", "Hypothese"] } }, required: ["name", "timing", "target", "benefit", "sideEffect", "effort", "sourceStatus"] } },
-    strategies: { type: "array", items: { type: "object", additionalProperties: false, properties: { name: { type: "string" }, description: { type: "string" }, speed: { type: "integer", minimum: 1, maximum: 5 }, speedText: { type: "string" }, acceptance: { type: "integer", minimum: 1, maximum: 5 }, acceptanceText: { type: "string" }, control: { type: "integer", minimum: 1, maximum: 5 }, controlText: { type: "string" }, innovation: { type: "integer", minimum: 1, maximum: 5 }, innovationText: { type: "string" }, risk: { type: "integer", minimum: 1, maximum: 5 }, riskText: { type: "string" }, conditions: { type: "string" }, failureMode: { type: "string" }, decisionSignal: { type: "string" }, sourceStatus: { type: "string", enum: ["explizit", "abgeleitet", "Hypothese"] } }, required: ["name", "description", "speed", "speedText", "acceptance", "acceptanceText", "control", "controlText", "innovation", "innovationText", "risk", "riskText", "conditions", "failureMode", "decisionSignal", "sourceStatus"] } },
+    assumptions: { type: "array", items: { type: "object", additionalProperties: true } },
+    personas: { type: "array", items: { type: "object", additionalProperties: true } },
+    resources: { type: "array", items: { type: "object", additionalProperties: true } },
+    interventions: { type: "array", items: { type: "object", additionalProperties: true } },
+    strategies: { type: "array", items: { type: "object", additionalProperties: true } },
     openQuestions: { type: "array", items: { type: "string" } },
     warnings: { type: "array", items: { type: "string" } }
   },
@@ -243,12 +260,5 @@ app.post("/api/simulate", async (req, res) => {
 
 app.use(express.static(path.join(__dirname, "dist")));
 app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "dist", "index.html")));
-
-async function shutdown() {
-  if (prisma) await prisma.$disconnect();
-  process.exit(0);
-}
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
 
 app.listen(PORT, () => console.log(`KI-Kernel GPT läuft auf Port ${PORT}`));
