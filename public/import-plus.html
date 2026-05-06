@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Import+ · KI-Kernel GPT</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
+    body { margin:0; background:#f1f5f9; line-height:1.55; }
+    header { background:#020617; color:white; padding:42px 24px; }
+    main { max-width:1180px; margin:0 auto; padding:24px; }
+    .hero { max-width:1180px; margin:0 auto; }
+    h1 { font-size: clamp(30px, 5vw, 52px); margin:12px 0; line-height:1.05; }
+    h2 { margin:0 0 12px; font-size:22px; }
+    h3 { margin:18px 0 8px; font-size:18px; }
+    .badge { display:inline-block; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 12px; color:#cbd5e1; font-size:14px; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:22px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,.05); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
+    label { display:block; font-weight:750; font-size:14px; color:#334155; margin-bottom:6px; }
+    select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font:inherit; background:white; }
+    textarea { min-height:220px; }
+    button, .btn { appearance:none; border:1px solid #cbd5e1; border-radius:14px; padding:10px 14px; background:white; color:#0f172a; font-weight:800; cursor:pointer; text-decoration:none; display:inline-block; }
+    .primary { background:#020617; color:white; border-color:#020617; }
+    .muted { color:#64748b; font-size:14px; }
+    .pill { display:inline-block; border-radius:999px; background:#f8fafc; border:1px solid #e2e8f0; padding:5px 10px; margin:2px; font-size:12px; font-weight:750; }
+    .warn { background:#fffbeb; border-color:#fde68a; }
+    .bad { background:#fff1f2; border-color:#fecdd3; }
+    .ok { background:#ecfdf5; border-color:#bbf7d0; }
+    pre { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:18px; padding:18px; overflow:auto; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="badge">Import+ · Schritt 5</span>
+    <h1>Erweiterter Dokumentimport</h1>
+    <p>Import+ liest TXT, MD und JSON direkt im Browser. PDF und DOCX werden über den Server extrahiert, sofern die benötigten Pakete installiert sind.</p>
+    <p><a class="btn" href="/">Zurück zur App</a> <a class="btn" href="/bericht-plus.html">Bericht+</a></p>
+  </div>
+</header>
+<main>
+  <section class="card warn">
+    <h2>Datenschutz-Hinweis</h2>
+    <p>Nutze keine echten Personenprofile, keine Klientendaten und keine vertraulichen Einzelfälle. Importierte Dokumente werden als untrusted input behandelt und zunächst nur in Text überführt.</p>
+  </section>
+  <section class="card">
+    <h2>Datei importieren</h2>
+    <div class="grid">
+      <div><label>Dokumenttyp</label><select id="documentType"><option>Konzept</option><option>Projektantrag</option><option>Workshopplan</option><option>Richtlinie</option><option>Protokoll</option><option>Strategiepapier</option><option>Schulungskonzept</option><option>Sonstiges</option></select></div>
+      <div><label>Analysemodus</label><select id="analysisMode"><option>beratend</option><option>vorsichtig</option><option>pre-mortem</option></select></div>
+      <div><label>Datei</label><input id="file" type="file" accept=".txt,.md,.json,.pdf,.docx,text/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="primary" onclick="extract()">Text extrahieren</button>
+      <button onclick="createScenario()">Szenarioentwurf erzeugen</button>
+      <button onclick="copyText()">Text kopieren</button>
+      <button onclick="saveDraftLocally()">Entwurf lokal speichern</button>
+    </div>
+    <div id="status" class="muted" style="margin-top:12px;">Bereit.</div>
+  </section>
+  <section class="card">
+    <h2>Extrahierter Text</h2>
+    <textarea id="text" placeholder="Extrahierter Text erscheint hier. Du kannst ihn vor der Szenarioerstellung kürzen oder bereinigen."></textarea>
+    <p class="muted">Maximal sinnvoll für den Szenarioimport: ca. 45.000 Zeichen. Längere Dokumente bitte kürzen.</p>
+  </section>
+  <div id="result"></div>
+</main>
+<script>
+function status(msg, cls="muted"){ const el=document.getElementById("status"); el.className=cls; el.textContent=msg; }
+function file(){ return document.getElementById("file").files[0]; }
+function ext(name){ return (name.split(".").pop()||"").toLowerCase(); }
+async function extract(){
+  const f=file(); if(!f){ status("Bitte Datei auswählen.","bad"); return; }
+  status("Extrahiere Text ...");
+  const e=ext(f.name);
+  if(["txt","md","json"].includes(e) || f.type.startsWith("text/")){
+    document.getElementById("text").value = await f.text();
+    status(`Text lokal extrahiert: ${f.name}`,"ok"); return;
+  }
+  if(["pdf","docx"].includes(e)){
+    const fd=new FormData(); fd.append("file",f);
+    const res=await fetch("/api/extract-document",{method:"POST",body:fd});
+    if(!res.ok){ const t=await res.text(); status(`Serverextraktion fehlgeschlagen: ${t}`,"bad"); return; }
+    const data=await res.json();
+    document.getElementById("text").value=data.text||"";
+    status(`Serverextraktion abgeschlossen: ${data.filename || f.name}, ${data.characters || 0} Zeichen`,"ok"); return;
+  }
+  status("Dateityp nicht unterstützt. Nutze TXT, MD, JSON, PDF oder DOCX.","bad");
+}
+async function createScenario(){
+  const text=document.getElementById("text").value.trim();
+  if(text.length<80){ status("Text ist zu kurz für einen Szenarioentwurf.","bad"); return; }
+  if(text.length>45000){ status("Text ist zu lang. Bitte auf unter 45.000 Zeichen kürzen.","bad"); return; }
+  status("Erzeuge Szenarioentwurf mit GPT ...");
+  const res=await fetch("/api/import-scenario",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,documentType:document.getElementById("documentType").value,analysisMode:document.getElementById("analysisMode").value})});
+  if(!res.ok){ const t=await res.text(); status(`Szenarioimport fehlgeschlagen: ${t}`,"bad"); return; }
+  const draft=await res.json();
+  window.__draft=draft;
+  document.getElementById("result").innerHTML=`<section class="card ok"><h2>Szenarioentwurf erzeugt</h2><p><b>${esc(draft.context?.title)}</b></p><p>${esc(draft.context?.decisionQuestion)}</p><div><span class="pill">Annahmen ${draft.assumptions?.length||0}</span><span class="pill">Personas ${draft.personas?.length||0}</span><span class="pill">Ressourcen ${draft.resources?.length||0}</span><span class="pill">Interventionen ${draft.interventions?.length||0}</span><span class="pill">Strategien ${draft.strategies?.length||0}</span></div><h3>JSON-Vorschau</h3><pre>${esc(JSON.stringify(draft,null,2))}</pre></section>`;
+  status("Szenarioentwurf erzeugt. Du kannst ihn lokal speichern oder JSON kopieren.","ok");
+}
+function saveDraftLocally(){
+  if(!window.__draft){ status("Noch kein Entwurf vorhanden.","bad"); return; }
+  const key="ki-kernel-import-plus-drafts";
+  const list=JSON.parse(localStorage.getItem(key)||"[]");
+  list.unshift({id:Math.random().toString(36).slice(2,9),date:new Date().toISOString(),draft:window.__draft});
+  localStorage.setItem(key,JSON.stringify(list));
+  status("Entwurf lokal unter Import+-Entwürfe gespeichert. Noch nicht automatisch in die Haupt-App übernommen.","ok");
+}
+function copyText(){ navigator.clipboard?.writeText(document.getElementById("text").value); status("Text kopiert.","ok"); }
+function esc(s){ return String(s||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;","\"":"&quot;"}[c])); }
+</script>
+</body>
+</html>
