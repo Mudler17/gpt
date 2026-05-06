@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vergleich+ · KI-Kernel GPT</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
+    body { margin:0; background:#f1f5f9; line-height:1.55; }
+    header { background:#020617; color:white; padding:42px 24px; }
+    main { max-width:1180px; margin:0 auto; padding:24px; }
+    .hero { max-width:1180px; margin:0 auto; }
+    h1 { font-size: clamp(30px, 5vw, 52px); margin:12px 0; line-height:1.05; }
+    h2 { margin:0 0 12px; font-size:22px; }
+    .badge { display:inline-block; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 12px; color:#cbd5e1; font-size:14px; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:22px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,.05); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; }
+    label { display:block; font-weight:750; font-size:14px; color:#334155; margin-bottom:6px; }
+    select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:11px 12px; font:inherit; background:white; }
+    textarea { min-height:120px; }
+    button, .btn { appearance:none; border:1px solid #cbd5e1; border-radius:14px; padding:10px 14px; background:white; color:#0f172a; font-weight:800; cursor:pointer; text-decoration:none; display:inline-block; }
+    .primary { background:#020617; color:white; border-color:#020617; }
+    .muted { color:#64748b; font-size:14px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { border-bottom:1px solid #e2e8f0; padding:10px; text-align:left; vertical-align:top; }
+    th { background:#f8fafc; }
+    .pill { display:inline-block; border-radius:999px; background:#f8fafc; border:1px solid #e2e8f0; padding:5px 10px; margin:2px; font-size:12px; font-weight:750; }
+    .good { background:#ecfdf5; border-color:#bbf7d0; }
+    .warn { background:#fffbeb; border-color:#fde68a; }
+    .bad { background:#fff1f2; border-color:#fecdd3; }
+    pre { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:18px; padding:18px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <span class="badge">Vergleich+ · Schritt 1</span>
+      <h1>Beratungsfähiger Szenariovergleich</h1>
+      <p>Vergleiche bis zu drei gespeicherte Szenarien aus der App. Die Seite liest dieselbe lokale Browser-Speicherung wie KI-Kernel GPT 0.8.</p>
+      <p><a class="btn" href="/">Zurück zur App</a></p>
+    </div>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Szenarien auswählen</h2>
+      <p class="muted">Speichere in der App zuerst mindestens zwei Szenarien. Öffne danach diese Seite neu.</p>
+      <div class="grid">
+        <div><label>Szenario A</label><select id="selA"></select></div>
+        <div><label>Szenario B</label><select id="selB"></select></div>
+        <div><label>Szenario C optional</label><select id="selC"></select></div>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="primary" onclick="render()">Vergleich erzeugen</button>
+        <button onclick="copyReport()">Vergleichsbericht kopieren</button>
+        <button onclick="downloadReport()">Als TXT herunterladen</button>
+      </div>
+    </section>
+    <div id="out"></div>
+  </main>
+<script>
+const STORAGE_KEY = "ki-kernel-szenarien-v8";
+const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+const arr = x => Array.isArray(x) ? x : [];
+const n = x => Number(x || 0);
+function resourceScore(r){ return (r.direction === "low_good" ? 6 - n(r.current || 1) : n(r.current || 1)) * 20; }
+function resourceGap(r){ return r.direction === "low_good" ? n(r.current || 1) - n(r.target || 1) : n(r.target || 1) - n(r.current || 1); }
+function avg(list,key){ return list.length ? list.reduce((s,x)=>s+n(x[key]),0)/list.length : 0; }
+function strategyScore(s){ return n(s.acceptance)*3+n(s.control)*3+n(s.innovation)*2+n(s.speed)-n(s.risk)*3; }
+function compute(state){
+  const resources=arr(state.resources), personas=arr(state.personas), assumptions=arr(state.assumptions), interventions=arr(state.interventions), strategies=arr(state.strategies);
+  const res=resources.length ? resources.reduce((sum,x)=>sum+resourceScore(x),0)/resources.length : 60;
+  const risky=assumptions.filter(x=>x.evidence === "niedrig" || x.uncertainty === "hoch");
+  const hasGov=interventions.some(x=>/daten|datenschutz|dokumentation|governance|checkliste|mav/i.test(`${x.name} ${x.target}`));
+  const hasPart=interventions.some(x=>/beteilig|reflexion|jour fixe|rollenklärung|workshop|interview|steelman/i.test(`${x.name} ${x.target}`));
+  const acceptance=Math.round(Math.min(100,20+avg(personas,"trust")*8+avg(personas,"aiLiteracy")*3+avg(personas,"changeEnergy")*4+(hasPart?16:0)+res*.15-risky.length*4));
+  const governance=Math.round(Math.min(100,30+avg(personas,"riskSense")*5+(hasGov?22:0)+res*.18));
+  const learning=Math.round(Math.min(100,25+avg(personas,"aiLiteracy")*7+avg(personas,"changeEnergy")*5+interventions.length*5));
+  const risk=Math.round(Math.max(0,100-(acceptance*.35+governance*.4+learning*.15+res*.1)));
+  const best=[...strategies].sort((a,b)=>strategyScore(b)-strategyScore(a))[0];
+  const score=acceptance+governance+learning+res-risk;
+  return { acceptance, governance, learning, resources:Math.round(res), risk, risky, deficits:resources.filter(x=>resourceGap(x)>0), bestStrategy:best, score };
+}
+function opt(select){
+  select.innerHTML = `<option value="">— nicht gewählt —</option>` + saved.map(x=>`<option value="${x.id}">${escapeHtml(x.name)}</option>`).join("");
+}
+function escapeHtml(s){ return String(s||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;","\"":"&quot;"}[c])); }
+function byId(id){ return saved.find(x=>x.id===id); }
+function list(xs, prop="name"){ return arr(xs).map(x=>x[prop]||x.text||x.name).filter(Boolean); }
+function getSelected(){ return ["selA","selB","selC"].map(id=>byId(document.getElementById(id).value)).filter(Boolean); }
+function classifyDelta(key, delta){
+  if(key === "risk") return delta < -8 ? "good" : delta > 8 ? "bad" : "warn";
+  return delta > 8 ? "good" : delta < -8 ? "bad" : "warn";
+}
+function render(){
+  const items = getSelected();
+  if(items.length < 2){ document.getElementById("out").innerHTML = `<section class="card warn"><b>Bitte mindestens zwei gespeicherte Szenarien auswählen.</b></section>`; return; }
+  const enriched = items.map(item => ({...item, calc: compute(item.state)})).sort((a,b)=>b.calc.score-a.calc.score);
+  const best = enriched[0];
+  const base = enriched[0];
+  const metrics = [["Akzeptanz","acceptance"],["Governance","governance"],["Ressourcen","resources"],["Lernfähigkeit","learning"],["Restrisiko","risk"]];
+  const rows = metrics.map(([label,key])=>`<tr><td><b>${label}</b></td>${enriched.map(x=>`<td>${x.calc[key]}</td>`).join("")}${enriched.length>1?`<td class="${classifyDelta(key, enriched[0].calc[key]-enriched[1].calc[key])}">${enriched[0].calc[key]-enriched[1].calc[key]}</td>`:""}</tr>`).join("");
+  const html = `
+    <section class="card">
+      <h2>Beratungsverdichtung</h2>
+      <p><b>Stärkste Variante nach heuristischer Gesamtbewertung:</b> ${escapeHtml(best.name)}</p>
+      <p class="muted">Diese Empfehlung ist keine Entscheidung. Sie zeigt, welches Szenario nach Akzeptanz, Governance, Lernfähigkeit, Ressourcen und Restrisiko am tragfähigsten wirkt.</p>
+      <div>${enriched.map((x,idx)=>`<span class="pill ${idx===0?"good":""}">${idx+1}. ${escapeHtml(x.name)} · Score ${Math.round(x.calc.score)}</span>`).join("")}</div>
+    </section>
+    <section class="card">
+      <h2>Kennzahlenvergleich</h2>
+      <table><thead><tr><th>Kriterium</th>${enriched.map(x=>`<th>${escapeHtml(x.name)}</th>`).join("")}<th>Delta 1–2</th></tr></thead><tbody>${rows}</tbody></table>
+    </section>
+    <section class="grid">
+      ${enriched.map(x=>`
+        <div class="card">
+          <h2>${escapeHtml(x.name)}</h2>
+          <p><b>Geladener Titel:</b><br>${escapeHtml(x.state.context?.title)}</p>
+          <p><b>Empfohlene Strategie:</b><br>${escapeHtml(x.calc.bestStrategy?.name || "—")}</p>
+          <p><b>Entscheidungssignal:</b><br>${escapeHtml(x.calc.bestStrategy?.decisionSignal || "—")}</p>
+          <p><b>Engpässe:</b></p>
+          <ul>${x.calc.deficits.slice(0,5).map(r=>`<li>${escapeHtml(r.name)}: ${escapeHtml(r.bottleneck||"ohne Notiz")}</li>`).join("") || "<li>keine</li>"}</ul>
+          <p><b>Riskante Annahmen:</b></p>
+          <ul>${x.calc.risky.slice(0,5).map(a=>`<li>${escapeHtml(a.text)}</li>`).join("") || "<li>keine</li>"}</ul>
+        </div>
+      `).join("")}
+    </section>
+    <section class="card">
+      <h2>Zielkonfliktanalyse</h2>
+      ${targetConflicts(enriched)}
+    </section>
+    <section class="card">
+      <h2>Was gewinnt man, was verliert man?</h2>
+      ${gainsLosses(enriched)}
+    </section>
+    <section class="card">
+      <h2>Gemeinsame und unterschiedliche Interventionen</h2>
+      ${interventionCompare(enriched)}
+    </section>
+    <section class="card">
+      <h2>Vergleichsbericht</h2>
+      <pre id="reportText">${escapeHtml(makeReport(enriched))}</pre>
+    </section>
+  `;
+  document.getElementById("out").innerHTML = html;
+}
+function targetConflicts(items){
+  return items.map(x=>{
+    const c=x.calc;
+    const flags=[];
+    if(c.acceptance>=70 && c.governance<65) flags.push("hohe Akzeptanz bei schwächerer Governance");
+    if(c.governance>=75 && c.acceptance<65) flags.push("starke Governance bei begrenzter Akzeptanz");
+    if(c.learning>=70 && c.risk>35) flags.push("hohes Lernpotenzial bei relevantem Restrisiko");
+    if(c.resources<60 && c.acceptance>=65) flags.push("Akzeptanz wirkt besser als Ressourcenlage");
+    if(!flags.length) flags.push("keine auffällige Zielkonfliktmarkierung");
+    return `<p><b>${escapeHtml(x.name)}:</b> ${flags.map(escapeHtml).join("; ")}</p>`;
+  }).join("");
+}
+function gainsLosses(items){
+  if(items.length<2) return "<p>nicht genug Szenarien</p>";
+  const [a,b]=items;
+  const keys=["acceptance","governance","resources","learning","risk"];
+  const label={acceptance:"Akzeptanz",governance:"Governance",resources:"Ressourcen",learning:"Lernfähigkeit",risk:"Restrisiko"};
+  const diffs=keys.map(k=>({k,d:a.calc[k]-b.calc[k]}));
+  return `<p><b>${escapeHtml(a.name)} gegenüber ${escapeHtml(b.name)}:</b></p><ul>${diffs.map(x=>`<li>${label[x.k]}: ${x.d>0?"+":""}${x.d}${x.k==="risk"?(x.d<0?" besser":" schlechter"):(x.d>0?" besser":" schlechter")}</li>`).join("")}</ul>`;
+}
+function interventionCompare(items){
+  const sets=items.map(x=>new Set(list(x.state.interventions).map(s=>s.toLowerCase())));
+  const all=[...new Set(items.flatMap(x=>list(x.state.interventions)))];
+  const common=all.filter(name=>sets.every(s=>s.has(name.toLowerCase())));
+  const unique=items.map((x,idx)=>({name:x.name, items:list(x.state.interventions).filter(n=>!common.map(c=>c.toLowerCase()).includes(n.toLowerCase()))}));
+  return `<p><b>Gemeinsam:</b> ${common.map(escapeHtml).join(", ") || "keine"}</p>` + unique.map(x=>`<p><b>Nur ${escapeHtml(x.name)}:</b> ${x.items.map(escapeHtml).join(", ") || "keine"}</p>`).join("");
+}
+function makeReport(items){
+  const best=items[0];
+  return `Vergleich+ Bericht\n\nAusgewählte Szenarien:\n${items.map((x,idx)=>`${idx+1}. ${x.name}`).join("\n")}\n\nVorläufig stärkste Variante:\n${best.name}\nScore: ${Math.round(best.calc.score)}\nEmpfohlene Strategie: ${best.calc.bestStrategy?.name || "—"}\n\nKennzahlen:\n${items.map(x=>`${x.name}: Akzeptanz ${x.calc.acceptance}, Governance ${x.calc.governance}, Ressourcen ${x.calc.resources}, Lernfähigkeit ${x.calc.learning}, Restrisiko ${x.calc.risk}`).join("\n")}\n\nZentrale Engpässe:\n${items.map(x=>`${x.name}: ${x.calc.deficits.map(r=>`${r.name} (${r.bottleneck||"ohne Notiz"})`).join("; ") || "keine"}`).join("\n")}\n\nRiskante Annahmen:\n${items.map(x=>`${x.name}: ${x.calc.risky.map(a=>a.text).join("; ") || "keine"}`).join("\n")}\n\nPrüfhinweis:\nDieser Vergleich ist heuristisch. Er ersetzt keine Entscheidung, sondern macht Zielkonflikte, Engpässe und offene Klärungen sichtbarer.`;
+}
+function copyReport(){ const t=document.getElementById("reportText")?.innerText || ""; navigator.clipboard?.writeText(t); }
+function downloadReport(){ const t=document.getElementById("reportText")?.innerText || makeReport(getSelected().map(x=>({...x,calc:compute(x.state)})).sort((a,b)=>b.calc.score-a.calc.score)); const blob=new Blob([t],{type:"text/plain;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="vergleich-plus-bericht.txt"; a.click(); URL.revokeObjectURL(a.href); }
+["selA","selB","selC"].forEach(id=>opt(document.getElementById(id)));
+if(saved[0]) document.getElementById("selA").value=saved[0].id;
+if(saved[1]) document.getElementById("selB").value=saved[1].id;
+if(saved.length>=2) render();
+</script>
+</body>
+</html>
