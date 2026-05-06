@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phasenmodell · KI-Kernel GPT</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#0f172a; background:#f1f5f9; }
+    body { margin:0; background:#f1f5f9; line-height:1.55; }
+    header { background:#020617; color:white; padding:42px 24px; }
+    main { max-width:1240px; margin:0 auto; padding:24px; }
+    .hero { max-width:1240px; margin:0 auto; }
+    h1 { font-size: clamp(30px, 5vw, 52px); margin:12px 0; line-height:1.05; }
+    h2 { margin:0 0 12px; font-size:22px; }
+    h3 { margin:16px 0 8px; font-size:18px; }
+    .badge { display:inline-block; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 12px; color:#cbd5e1; font-size:14px; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:22px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,.05); margin-bottom:16px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
+    label { display:block; font-weight:750; font-size:14px; color:#334155; margin-bottom:6px; }
+    select, textarea, input { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:14px; padding:10px 12px; font:inherit; background:white; }
+    textarea { min-height:90px; }
+    button, .btn { appearance:none; border:1px solid #cbd5e1; border-radius:14px; padding:10px 14px; background:white; color:#0f172a; font-weight:800; cursor:pointer; text-decoration:none; display:inline-block; }
+    .primary { background:#020617; color:white; border-color:#020617; }
+    .muted { color:#64748b; font-size:14px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { border-bottom:1px solid #e2e8f0; padding:10px; text-align:left; vertical-align:top; }
+    th { background:#f8fafc; }
+    .phase { border:1px solid #e2e8f0; border-radius:20px; padding:16px; background:#f8fafc; margin-bottom:12px; }
+    .pill { display:inline-block; border-radius:999px; background:#f8fafc; border:1px solid #e2e8f0; padding:5px 10px; margin:2px; font-size:12px; font-weight:750; }
+    .good { background:#ecfdf5; border-color:#bbf7d0; }
+    .warn { background:#fffbeb; border-color:#fde68a; }
+    .bad { background:#fff1f2; border-color:#fecdd3; }
+    .bar { height:10px; border-radius:999px; background:#e2e8f0; overflow:hidden; }
+    .fill { height:10px; border-radius:999px; background:#0f172a; }
+    pre { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:18px; padding:18px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <span class="badge">Phasenmodell · Schritt 2</span>
+      <h1>Vom Szenario zur Verlaufssimulation</h1>
+      <p>Diese Seite ergänzt die App um einen editierbaren Phasenverlauf. Sie liest gespeicherte Szenarien, modelliert Ressourcenbewegungen und markiert Kipppunkte.</p>
+      <p><a class="btn" href="/">Zurück zur App</a> <a class="btn" href="/vergleich-plus.html">Vergleich+</a></p>
+    </div>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Szenario auswählen</h2>
+      <p class="muted">Speichere in der App zuerst ein Szenario. Diese Seite liest die lokale Browser-Speicherung der App.</p>
+      <div class="grid">
+        <div><label>Gespeichertes Szenario</label><select id="scenarioSelect"></select></div>
+        <div><label>Phasen-Set</label><select id="phasePreset"><option value="change">Change / KI-Einführung</option><option value="workshop">Workshop</option><option value="project">Projekt / Angebot</option><option value="team">Teamentwicklung</option></select></div>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="primary" onclick="loadScenario()">Phasenmodell erzeugen</button>
+        <button onclick="addPhase()">Phase hinzufügen</button>
+        <button onclick="renderAnalysis()">Neu berechnen</button>
+        <button onclick="copyReport()">Phasenbericht kopieren</button>
+        <button onclick="downloadReport()">Als TXT herunterladen</button>
+      </div>
+    </section>
+    <div id="scenarioInfo"></div>
+    <section class="card" id="phaseEditor" style="display:none;">
+      <h2>Phasen bearbeiten</h2>
+      <p class="muted">Jede Phase beschreibt Ziel, Dynamik, Ressourcenwirkung, erwartete Persona-Reaktion, Intervention und Kipprisiko. Werte von -2 bis +2 beschreiben die Wirkung auf Ressourcen.</p>
+      <div id="phases"></div>
+    </section>
+    <div id="analysis"></div>
+  </main>
+<script>
+const STORAGE_KEY = "ki-kernel-szenarien-v8";
+const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+const arr = x => Array.isArray(x) ? x : [];
+let currentItem = null;
+let phases = [];
+const defaultResources = ["Vertrauen", "Klarheit", "Energie", "Konfliktspannung", "Zeitdruck"];
+const presets = {
+  change: ["Ausgangslage", "Ankündigung", "Beteiligung", "Irritation / Konflikt", "Entscheidung", "Umsetzung", "Nachwirkung"],
+  workshop: ["Vorbereitung", "Einstieg", "Problemklärung", "Arbeitsphase", "Entscheidung / Verdichtung", "Abschluss", "Transfer"],
+  project: ["Idee", "Bedarfsprüfung", "Konzept", "Pilot", "Entscheidung", "Skalierung", "Evaluation"],
+  team: ["Ausgangslage", "Irritation", "Storming", "Klärung", "Vereinbarung", "Erprobung", "Retrospektive"]
+};
+function escapeHtml(s){ return String(s||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;","\"":"&quot;"}[c])); }
+function opt(){
+  const sel=document.getElementById("scenarioSelect");
+  sel.innerHTML = `<option value="">— Szenario wählen —</option>` + saved.map(x=>`<option value="${x.id}">${escapeHtml(x.name)}</option>`).join("");
+  if(saved[0]) sel.value=saved[0].id;
+}
+function byId(id){ return saved.find(x=>x.id===id); }
+function resourceNames(state){
+  const names = arr(state.resources).map(r=>r.name).filter(Boolean);
+  return [...new Set([...names, ...defaultResources])].slice(0,8);
+}
+function phaseTemplate(name, idx, resources){
+  const baseRisk = idx === 0 ? 1 : idx === 3 ? 4 : idx === 4 ? 4 : 2;
+  return {
+    id: Math.random().toString(36).slice(2,9),
+    name,
+    goal: idx===0 ? "Ausgangslage verstehen und Rahmen klären." : "Phase fachlich konkretisieren.",
+    dynamic: idx===3 ? "Irritationen, Schutzlogiken oder Zielkonflikte werden sichtbar." : "Erwartbare Dynamik beschreiben.",
+    personaReaction: "Wahrscheinliche Reaktionen der wichtigsten Personas eintragen.",
+    intervention: idx===0 ? "Rahmen, Ziel und Grenzen transparent machen." : "Passende Intervention auswählen oder formulieren.",
+    risk: baseRisk,
+    note: "",
+    effects: Object.fromEntries(resources.map(r => [r, idx===0 ? 0 : idx===3 ? -1 : idx===4 ? -1 : 0]))
+  };
+}
+function loadScenario(){
+  currentItem = byId(document.getElementById("scenarioSelect").value);
+  if(!currentItem){ document.getElementById("scenarioInfo").innerHTML = `<section class="card bad"><b>Kein Szenario ausgewählt.</b></section>`; return; }
+  const resources = resourceNames(currentItem.state);
+  phases = presets[document.getElementById("phasePreset").value].map((name,idx)=>phaseTemplate(name,idx,resources));
+  document.getElementById("scenarioInfo").innerHTML = `<section class="card"><h2>Aktuelles Phasenmodell</h2><p><b>${escapeHtml(currentItem.name)}</b></p><p class="muted">${escapeHtml(currentItem.state.context?.title || "")}</p><div>${resources.map(r=>`<span class="pill">${escapeHtml(r)}</span>`).join("")}</div></section>`;
+  document.getElementById("phaseEditor").style.display = "block";
+  renderPhases();
+  renderAnalysis();
+}
+function addPhase(){
+  if(!currentItem) return loadScenario();
+  phases.push(phaseTemplate("Neue Phase", phases.length, resourceNames(currentItem.state)));
+  renderPhases();
+  renderAnalysis();
+}
+function removePhase(id){ phases = phases.filter(p=>p.id!==id); renderPhases(); renderAnalysis(); }
+function movePhase(id, dir){
+  const idx=phases.findIndex(p=>p.id===id); const ni=idx+dir; if(idx<0||ni<0||ni>=phases.length) return;
+  const tmp=phases[idx]; phases[idx]=phases[ni]; phases[ni]=tmp; renderPhases(); renderAnalysis();
+}
+function updatePhase(id, key, value){ const p=phases.find(p=>p.id===id); if(!p) return; p[key]=value; }
+function updateEffect(id, resource, value){ const p=phases.find(p=>p.id===id); if(!p) return; p.effects[resource]=Number(value); }
+function renderPhases(){
+  const resources = resourceNames(currentItem.state);
+  document.getElementById("phases").innerHTML = phases.map((p,idx)=>`
+    <div class="phase">
+      <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+        <h3>${idx+1}. ${escapeHtml(p.name)}</h3>
+        <div><button onclick="movePhase('${p.id}',-1)">↑</button> <button onclick="movePhase('${p.id}',1)">↓</button> <button onclick="removePhase('${p.id}')">löschen</button></div>
+      </div>
+      <div class="grid">
+        <div><label>Phasenname</label><input value="${escapeHtml(p.name)}" oninput="updatePhase('${p.id}','name',this.value)"></div>
+        <div><label>Kipprisiko 1–5</label><input type="range" min="1" max="5" value="${p.risk}" oninput="updatePhase('${p.id}','risk',Number(this.value)); this.nextElementSibling.textContent=this.value;"><span class="pill">${p.risk}</span></div>
+        <div><label>Ziel</label><textarea oninput="updatePhase('${p.id}','goal',this.value)">${escapeHtml(p.goal)}</textarea></div>
+        <div><label>Kritische Dynamik</label><textarea oninput="updatePhase('${p.id}','dynamic',this.value)">${escapeHtml(p.dynamic)}</textarea></div>
+        <div><label>Persona-Reaktion</label><textarea oninput="updatePhase('${p.id}','personaReaction',this.value)">${escapeHtml(p.personaReaction)}</textarea></div>
+        <div><label>Intervention</label><textarea oninput="updatePhase('${p.id}','intervention',this.value)">${escapeHtml(p.intervention)}</textarea></div>
+      </div>
+      <h3>Ressourcenwirkung</h3>
+      <table><thead><tr><th>Ressource</th><th>Wirkung -2 bis +2</th><th>Hinweis</th></tr></thead><tbody>
+        ${resources.map(r=>`<tr><td><b>${escapeHtml(r)}</b></td><td><input type="range" min="-2" max="2" value="${p.effects[r] ?? 0}" oninput="updateEffect('${p.id}','${escapeHtml(r)}',this.value); this.nextElementSibling.textContent=this.value;"><span class="pill">${p.effects[r] ?? 0}</span></td><td>${effectLabel(p.effects[r] ?? 0)}</td></tr>`).join("")}
+      </tbody></table>
+      <div style="margin-top:12px;"><label>Notiz</label><textarea oninput="updatePhase('${p.id}','note',this.value)">${escapeHtml(p.note)}</textarea></div>
+    </div>
+  `).join("");
+}
+function effectLabel(v){ v=Number(v); if(v<=-2) return "stark destabilisierend"; if(v===-1) return "leicht destabilisierend"; if(v===0) return "neutral / unklar"; if(v===1) return "leicht stabilisierend"; return "stark stabilisierend"; }
+function initialValue(resource){
+  const r = arr(currentItem.state.resources).find(x=>x.name===resource);
+  return Math.max(1, Math.min(5, Number(r?.current || 3)));
+}
+function trajectories(){
+  const resources=resourceNames(currentItem.state);
+  const data={};
+  resources.forEach(res=>{
+    let val=initialValue(res);
+    data[res]=[{phase:"Start", value:val}];
+    phases.forEach(p=>{
+      val=Math.max(1, Math.min(5, val + Number(p.effects[res] || 0)));
+      data[res].push({phase:p.name, value:val});
+    });
+  });
+  return data;
+}
+function detectTippingPoints(data){
+  const points=[];
+  phases.forEach((p, idx)=>{
+    const highRisk = Number(p.risk) >= 4;
+    const negatives = Object.entries(p.effects).filter(([k,v])=>Number(v)<0).map(([k])=>k);
+    const criticalLow = Object.entries(data).filter(([res,series])=>series[idx+1]?.value <= 2).map(([res])=>res);
+    if(highRisk || negatives.length>=2 || criticalLow.length){
+      points.push({phase:p.name, reason:[highRisk?"hohes Kipprisiko":"", negatives.length>=2?`mehrere negative Ressourcenwirkungen: ${negatives.join(", ")}`:"", criticalLow.length?`kritisch niedrige Ressourcen: ${criticalLow.join(", ")}`:""].filter(Boolean).join("; ")});
+    }
+  });
+  return points;
+}
+function renderAnalysis(){
+  if(!currentItem) return;
+  const data=trajectories();
+  const tips=detectTippingPoints(data);
+  const resources=Object.keys(data);
+  const tableRows=phases.map((p,idx)=>`<tr><td><b>${escapeHtml(p.name)}</b></td>${resources.map(r=>`<td>${data[r][idx+1].value}</td>`).join("")}<td>${p.risk}</td></tr>`).join("");
+  document.getElementById("analysis").innerHTML = `
+    <section class="card">
+      <h2>Ressourcenverlauf</h2>
+      <table><thead><tr><th>Phase</th>${resources.map(r=>`<th>${escapeHtml(r)}</th>`).join("")}<th>Kipprisiko</th></tr></thead><tbody>${tableRows}</tbody></table>
+    </section>
+    <section class="grid">
+      ${resources.map(r=>resourceCard(r,data[r])).join("")}
+    </section>
+    <section class="card ${tips.length?"warn":"good"}">
+      <h2>Kipppunkte</h2>
+      ${tips.length ? `<ul>${tips.map(t=>`<li><b>${escapeHtml(t.phase)}:</b> ${escapeHtml(t.reason)}</li>`).join("")}</ul>` : `<p>Keine deutlichen Kipppunkte nach aktueller Modellierung.</p>`}
+    </section>
+    <section class="card">
+      <h2>Phasenbericht</h2>
+      <pre id="phaseReport">${escapeHtml(makeReport(data,tips))}</pre>
+    </section>
+  `;
+}
+function resourceCard(name, series){
+  const last=series[series.length-1].value;
+  const cls=last<=2?"bad":last>=4?"good":"warn";
+  return `<div class="card ${cls}"><h2>${escapeHtml(name)}</h2><p class="muted">Start ${series[0].value} → Ende ${last}</p>${series.map(s=>`<div style="margin:9px 0;"><div style="display:flex;justify-content:space-between;font-size:13px;"><span>${escapeHtml(s.phase)}</span><b>${s.value}/5</b></div><div class="bar"><div class="fill" style="width:${s.value*20}%"></div></div></div>`).join("")}</div>`;
+}
+function makeReport(data,tips){
+  const title=currentItem?.state?.context?.title || currentItem?.name || "Szenario";
+  return `Phasenmodell Bericht\n\nSzenario:\n${title}\n\nPhasen:\n${phases.map((p,idx)=>`${idx+1}. ${p.name}\nZiel: ${p.goal}\nDynamik: ${p.dynamic}\nPersona-Reaktion: ${p.personaReaction}\nIntervention: ${p.intervention}\nKipprisiko: ${p.risk}/5`).join("\n\n")}\n\nRessourcenverlauf:\n${Object.entries(data).map(([res,series])=>`${res}: ${series.map(s=>`${s.phase} ${s.value}`).join(" → ")}`).join("\n")}\n\nKipppunkte:\n${tips.length ? tips.map(t=>`${t.phase}: ${t.reason}`).join("\n") : "Keine deutlichen Kipppunkte."}\n\nPrüfhinweis:\nDas Phasenmodell ist eine heuristische Verlaufssimulation. Es macht Annahmen, Dynamiken und Kipprisiken sichtbar, ersetzt aber keine empirische Organisationsdiagnose.`;
+}
+function copyReport(){ const t=document.getElementById("phaseReport")?.innerText || ""; navigator.clipboard?.writeText(t); }
+function downloadReport(){ const t=document.getElementById("phaseReport")?.innerText || ""; const blob=new Blob([t],{type:"text/plain;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="phasenmodell-bericht.txt"; a.click(); URL.revokeObjectURL(a.href); }
+opt();
+if(saved[0]) loadScenario();
+</script>
+</body>
+</html>
