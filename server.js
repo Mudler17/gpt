@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import multer from "multer";
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse";
+import { PrismaClient } from "@prisma/client";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +22,7 @@ const DATABASE_URL = process.env.DATABASE_URL || "";
 const STORAGE_MODE = process.env.STORAGE_MODE || "local";
 
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
+const prisma = DATABASE_URL ? new PrismaClient() : null;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_BYTES } });
 
 app.disable("x-powered-by");
@@ -64,15 +66,26 @@ function maskDatabaseUrl(url) {
   }
 }
 
-app.get("/api/health", (_req, res) => {
+async function checkDatabase() {
+  if (!prisma) return { reachable: false, note: "DATABASE_URL ist nicht gesetzt." };
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { reachable: true, note: "Datenbankverbindung erfolgreich." };
+  } catch (error) {
+    return { reachable: false, note: String(error?.message || error).slice(0, 500) };
+  }
+}
+
+app.get("/api/health", async (_req, res) => {
+  const db = await checkDatabase();
   res.json({
     ok: true,
-    appVersion: "1.7-db-preparation",
+    appVersion: "1.8-prisma-connected",
     model: OPENAI_MODEL,
     openaiConfigured: Boolean(OPENAI_API_KEY),
     databaseConfigured: Boolean(DATABASE_URL),
-    databaseReachable: null,
-    databaseReachableNote: "App 1.7 prüft nur, ob DATABASE_URL gesetzt ist. Eine echte Verbindungsprüfung folgt in App 1.8.",
+    databaseReachable: db.reachable,
+    databaseReachableNote: db.note,
     databaseUrlPreview: maskDatabaseUrl(DATABASE_URL),
     storageMode: STORAGE_MODE,
     allowedStorageModes: ["local", "hybrid", "db"],
@@ -195,4 +208,12 @@ app.post("/api/simulate", async (req, res) => {
 
 app.use(express.static(path.join(__dirname, "dist")));
 app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "dist", "index.html")));
+
+async function shutdown() {
+  if (prisma) await prisma.$disconnect();
+  process.exit(0);
+}
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
 app.listen(PORT, () => console.log(`KI-Kernel GPT läuft auf Port ${PORT}`));
