@@ -55,6 +55,7 @@
       <button onclick="createScenario()">Szenarioentwurf erzeugen</button>
       <button onclick="copyText()">Text kopieren</button>
       <button onclick="saveDraftLocally()">Entwurf lokal speichern</button>
+      <button onclick="adoptIntoMainApp()">Entwurf in Haupt-App übernehmen</button>
     </div>
     <div id="status" class="muted" style="margin-top:12px;">Bereit.</div>
   </section>
@@ -66,9 +67,11 @@
   <div id="result"></div>
 </main>
 <script>
+const MAIN_STORAGE_KEY = "ki-kernel-szenarien-v8";
 function status(msg, cls="muted"){ const el=document.getElementById("status"); el.className=cls; el.textContent=msg; }
 function file(){ return document.getElementById("file").files[0]; }
 function ext(name){ return (name.split(".").pop()||"").toLowerCase(); }
+function uid(){ return Math.random().toString(36).slice(2,10); }
 async function extract(){
   const f=file(); if(!f){ status("Bitte Datei auswählen.","bad"); return; }
   status("Extrahiere Text ...");
@@ -96,16 +99,66 @@ async function createScenario(){
   if(!res.ok){ const t=await res.text(); status(`Szenarioimport fehlgeschlagen: ${t}`,"bad"); return; }
   const draft=await res.json();
   window.__draft=draft;
-  document.getElementById("result").innerHTML=`<section class="card ok"><h2>Szenarioentwurf erzeugt</h2><p><b>${esc(draft.context?.title)}</b></p><p>${esc(draft.context?.decisionQuestion)}</p><div><span class="pill">Annahmen ${draft.assumptions?.length||0}</span><span class="pill">Personas ${draft.personas?.length||0}</span><span class="pill">Ressourcen ${draft.resources?.length||0}</span><span class="pill">Interventionen ${draft.interventions?.length||0}</span><span class="pill">Strategien ${draft.strategies?.length||0}</span></div><h3>JSON-Vorschau</h3><pre>${esc(JSON.stringify(draft,null,2))}</pre></section>`;
-  status("Szenarioentwurf erzeugt. Du kannst ihn lokal speichern oder JSON kopieren.","ok");
+  document.getElementById("result").innerHTML=`<section class="card ok"><h2>Szenarioentwurf erzeugt</h2><p><b>${esc(draft.context?.title)}</b></p><p>${esc(draft.context?.decisionQuestion)}</p><div><span class="pill">Annahmen ${draft.assumptions?.length||0}</span><span class="pill">Personas ${draft.personas?.length||0}</span><span class="pill">Ressourcen ${draft.resources?.length||0}</span><span class="pill">Interventionen ${draft.interventions?.length||0}</span><span class="pill">Strategien ${draft.strategies?.length||0}</span></div><div style="margin-top:14px;"><button class="primary" onclick="adoptIntoMainApp()">Entwurf in Haupt-App übernehmen</button> <a class="btn" href="/" target="_blank">Haupt-App öffnen</a></div><h3>JSON-Vorschau</h3><pre>${esc(JSON.stringify(draft,null,2))}</pre></section>`;
+  status("Szenarioentwurf erzeugt. Du kannst ihn jetzt in die Haupt-App übernehmen.","ok");
 }
 function saveDraftLocally(){
   if(!window.__draft){ status("Noch kein Entwurf vorhanden.","bad"); return; }
   const key="ki-kernel-import-plus-drafts";
   const list=JSON.parse(localStorage.getItem(key)||"[]");
-  list.unshift({id:Math.random().toString(36).slice(2,9),date:new Date().toISOString(),draft:window.__draft});
+  list.unshift({id:uid(),date:new Date().toISOString(),draft:window.__draft});
   localStorage.setItem(key,JSON.stringify(list));
-  status("Entwurf lokal unter Import+-Entwürfe gespeichert. Noch nicht automatisch in die Haupt-App übernommen.","ok");
+  status("Entwurf lokal unter Import+-Entwürfe gespeichert.","ok");
+}
+function adoptIntoMainApp(){
+  if(!window.__draft){ status("Noch kein Entwurf vorhanden. Erst Szenarioentwurf erzeugen.","bad"); return; }
+  const state = normalizeForMainApp(window.__draft);
+  const item = { id: uid(), name: `Import+ · ${state.context.title || "Szenario"}`, date: new Date().toISOString(), state };
+  const list = JSON.parse(localStorage.getItem(MAIN_STORAGE_KEY) || "[]");
+  list.unshift(item);
+  localStorage.setItem(MAIN_STORAGE_KEY, JSON.stringify(list));
+  localStorage.setItem("ki-kernel-last-import-plus-id", item.id);
+  status("Entwurf wurde in die Haupt-App übernommen. Öffne die Haupt-App und lade ihn unter Speicher.","ok");
+  const result=document.getElementById("result");
+  result.insertAdjacentHTML("afterbegin", `<section class="card ok"><h2>In Haupt-App übernommen</h2><p>Der Entwurf wurde als gespeichertes Szenario abgelegt:</p><p><b>${esc(item.name)}</b></p><p>Öffne jetzt die Haupt-App und gehe zu <b>Speicher → Laden</b>.</p><p><a class="btn primary" href="/" target="_blank">Haupt-App öffnen</a></p></section>`);
+}
+function normalizeForMainApp(draft){
+  const d=draft||{};
+  const ctx=d.context||{};
+  return {
+    id: uid(),
+    label: "Import+",
+    title: ctx.title || "Importiertes Szenario",
+    desc: ctx.decisionQuestion || "Aus Dokumentimport erzeugt",
+    context: {
+      title: ctx.title || "Importiertes Szenario",
+      domain: ctx.domain || document.getElementById("documentType").value || "Import",
+      decisionQuestion: ctx.decisionQuestion || "Entscheidungsfrage prüfen und ergänzen.",
+      goal: ctx.goal || "Ziel prüfen und ergänzen.",
+      boundaries: ctx.boundaries || "Keine personenbezogene Bewertung. Nur Rollen, Archetypen und anonymisierte Szenarien verwenden."
+    },
+    assumptions: (d.assumptions||[]).map(x=>({id:uid(), text:x.text||"Annahme prüfen", source:x.source||"Import+", evidence:x.evidence||"mittel", evidenceText:choiceText("evidence",x.evidence||"mittel"), uncertainty:x.uncertainty||"mittel", uncertaintyText:choiceText("uncertainty",x.uncertainty||"mittel"), sensitivity:x.sensitivity||"intern", sensitivityText:choiceText("sensitivity",x.sensitivity||"intern"), sourceStatus:x.sourceStatus||"abgeleitet", sourceStatusText:choiceText("sourceStatus",x.sourceStatus||"abgeleitet"), sourceExcerpt:x.sourceExcerpt||""})),
+    personas: (d.personas||[]).map(x=>persona(x)),
+    resources: (d.resources||[]).map(x=>resource(x)),
+    interventions: (d.interventions||[]).map(x=>intervention(x)),
+    strategies: (d.strategies||[]).map(x=>strategy(x)),
+    openQuestions: Array.isArray(d.openQuestions)?d.openQuestions:[],
+    warnings: Array.isArray(d.warnings)?d.warnings:["Importiertes Szenario fachlich prüfen."]
+  };
+}
+function persona(x){ return {id:uid(), name:x.name||"Import-Rolle", role:x.role||"Stakeholder", stance:x.stance||"unklar", influence:num(x.influence,3), influenceText:textFor("influence",num(x.influence,3)), affectedness:num(x.affectedness,3), affectednessText:textFor("affectedness",num(x.affectedness,3)), trust:num(x.trust,3), trustText:textFor("trust",num(x.trust,3)), aiLiteracy:num(x.aiLiteracy,3), aiLiteracyText:textFor("aiLiteracy",num(x.aiLiteracy,3)), riskSense:num(x.riskSense,3), riskSenseText:textFor("riskSense",num(x.riskSense,3)), changeEnergy:num(x.changeEnergy,3), changeEnergyText:textFor("changeEnergy",num(x.changeEnergy,3)), informalRole:x.informalRole||"keine besondere informelle Rolle", conflictStyle:x.conflictStyle||"unklar", trigger:x.trigger||"", learningNeed:x.learningNeed||"", communicationNeed:x.communicationNeed||"", sourceStatus:x.sourceStatus||"abgeleitet"}; }
+function resource(x){ return {id:uid(), name:x.name||"Import-Ressource", type:x.type||"sozial", current:num(x.current,3), currentText:textFor("current",num(x.current,3)), target:num(x.target,4), targetText:textFor("target",num(x.target,4)), direction:x.direction||"high_good", directionText:choiceText("direction",x.direction||"high_good"), trend:x.trend||"unklar", trendText:choiceText("trend",x.trend||"unklar"), bottleneck:x.bottleneck||"", owner:x.owner||"", sourceStatus:x.sourceStatus||"abgeleitet"}; }
+function intervention(x){ return {id:uid(), name:x.name||"Import-Intervention", timing:x.timing||"offen", timingText:`Intervention im Abschnitt „${x.timing||"offen"}“ mit Ziel und Nebenwirkung prüfen.`, target:x.target||"", benefit:x.benefit||"", sideEffect:x.sideEffect||"", effort:x.effort||"mittel", effortText:choiceText("effort",x.effort||"mittel"), sourceStatus:x.sourceStatus||"abgeleitet"}; }
+function strategy(x){ return {id:uid(), name:x.name||"Import-Strategie", description:x.description||"", speed:num(x.speed,3), speedText:x.speedText||textFor("speed",num(x.speed,3)), acceptance:num(x.acceptance,3), acceptanceText:x.acceptanceText||textFor("acceptance",num(x.acceptance,3)), control:num(x.control,3), controlText:x.controlText||textFor("control",num(x.control,3)), innovation:num(x.innovation,3), innovationText:x.innovationText||textFor("innovation",num(x.innovation,3)), risk:num(x.risk,3), riskText:x.riskText||textFor("risk",num(x.risk,3)), conditions:x.conditions||"", failureMode:x.failureMode||"", decisionSignal:x.decisionSignal||"", sourceStatus:x.sourceStatus||"abgeleitet"}; }
+function num(v,fallback){ const n=Number(v); return Math.max(1,Math.min(5,Number.isFinite(n)?n:fallback)); }
+function textFor(kind,value){
+  const i=Math.max(1,Math.min(5,Number(value||3)))-1;
+  const m={influence:["kaum systemprägend","begrenzt wirksam","mitprägend","stark prägend","Schlüsselrolle"],affectedness:["randständig betroffen","leicht betroffen","spürbar betroffen","stark betroffen","zentral betroffen"],trust:["sehr fragil","fragil","abhängig von Transparenz","tragfähig","stabilisierend"],aiLiteracy:["Grundlagen nötig","einfache Anleitung nötig","begleitete Anwendung möglich","selbständige Anwendung möglich","Multiplikatorrolle möglich"],riskSense:["Risiken werden leicht unterschätzt","Risiken aktiv sichtbar machen","abwägend","risikosensibel","Frühwarnrolle oder Blockadepunkt"],changeEnergy:["passiv/blockierend möglich","braucht Entlastung","Mitgehen möglich","unterstützend","treibend"],current:["akut schwach","fragil","tragfähig","gut nutzbar","starker Hebel"],target:["Minimalziel","leichte Verbesserung","solide Arbeitsfähigkeit","tragende Ressource","zentraler Erfolgsfaktor"],speed:["sehr langsam","eher langsam","mittleres Tempo","eher schnell","sehr schnell"],acceptance:["sehr geringe Akzeptanz","geringe Akzeptanz","mittlere Akzeptanz","hohe Akzeptanz","sehr hohe Akzeptanz"],control:["kaum steuerbar","lückenhaft","teilweise steuerbar","gut steuerbar","sehr gut abgesichert"],innovation:["kaum Erprobung","wenige Impulse","begrenztes Lernen","praxisnahe Experimente","hohes Lernpotenzial"],risk:["geringes Risiko","beherrschbar","aktiv zu moderieren","hoch","destabilisierend"]};
+  return m[kind]?.[i]||"fachlich prüfen";
+}
+function choiceText(kind,value){
+  const m={evidence:{niedrig:"Kaum belegt. Vor Entscheidung validieren.",mittel:"Plausibel, aber prüfbedürftig.",hoch:"Gut beobachtet oder durch mehrere Hinweise gestützt."},uncertainty:{niedrig:"Relativ stabile Annahme.",mittel:"Beobachten und prüfen.",hoch:"Hohe Unsicherheit; Simulation hängt stark daran."},sensitivity:{unkritisch:"Keine besondere Schutzbedürftigkeit.",intern:"Nur intern verwenden.",vertraulich:"Vertraulich behandeln und sparsam speichern.","personenbezogen vermeiden":"Nicht als personenbezogenes Profil verwenden."},sourceStatus:{explizit:"Ausdrücklich genannt.",abgeleitet:"Aus Kontext erschlossen.",Hypothese:"Beratungshypothese; prüfen."},direction:{high_good:"Je höher, desto besser.",low_good:"Je niedriger, desto besser."},trend:{steigend:"nimmt zu",stabil:"bleibt stabil",fallend:"nimmt ab",unklar:"unklar"},effort:{niedrig:"schnell umsetzbar",mittel:"braucht Vorbereitung",hoch:"braucht deutliche Ressourcen"}};
+  return m[kind]?.[value]||"prüfen";
 }
 function copyText(){ navigator.clipboard?.writeText(document.getElementById("text").value); status("Text kopiert.","ok"); }
 function esc(s){ return String(s||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;","\"":"&quot;"}[c])); }
