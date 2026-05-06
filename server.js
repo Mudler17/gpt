@@ -5,7 +5,6 @@ import OpenAI from "openai";
 import multer from "multer";
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse";
-import { PrismaClient } from "@prisma/client";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,8 +21,22 @@ const DATABASE_URL = process.env.DATABASE_URL || "";
 const STORAGE_MODE = process.env.STORAGE_MODE || "local";
 
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
-const prisma = DATABASE_URL ? new PrismaClient() : null;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_BYTES } });
+let prisma = null;
+let prismaInitError = null;
+
+async function getPrisma() {
+  if (!DATABASE_URL) return null;
+  if (prisma) return prisma;
+  try {
+    const mod = await import("@prisma/client");
+    prisma = new mod.PrismaClient();
+    return prisma;
+  } catch (error) {
+    prismaInitError = error;
+    return null;
+  }
+}
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: MAX_REQUEST_BYTES }));
@@ -67,9 +80,11 @@ function maskDatabaseUrl(url) {
 }
 
 async function checkDatabase() {
-  if (!prisma) return { reachable: false, note: "DATABASE_URL ist nicht gesetzt." };
+  if (!DATABASE_URL) return { reachable: false, note: "DATABASE_URL ist nicht gesetzt." };
+  const client = await getPrisma();
+  if (!client) return { reachable: false, note: `Prisma konnte nicht initialisiert werden: ${String(prismaInitError?.message || prismaInitError || "unbekannter Fehler").slice(0, 500)}` };
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await client.$queryRaw`SELECT 1`;
     return { reachable: true, note: "Datenbankverbindung erfolgreich." };
   } catch (error) {
     return { reachable: false, note: String(error?.message || error).slice(0, 500) };
@@ -80,7 +95,7 @@ app.get("/api/health", async (_req, res) => {
   const db = await checkDatabase();
   res.json({
     ok: true,
-    appVersion: "1.8-prisma-connected",
+    appVersion: "1.8-prisma-connected-safe",
     model: OPENAI_MODEL,
     openaiConfigured: Boolean(OPENAI_API_KEY),
     databaseConfigured: Boolean(DATABASE_URL),
@@ -210,7 +225,8 @@ app.use(express.static(path.join(__dirname, "dist")));
 app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "dist", "index.html")));
 
 async function shutdown() {
-  if (prisma) await prisma.$disconnect();
+  const client = prisma || await getPrisma();
+  if (client) await client.$disconnect();
   process.exit(0);
 }
 process.on("SIGINT", shutdown);
