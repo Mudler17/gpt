@@ -5,7 +5,6 @@ import OpenAI from "openai";
 import multer from "multer";
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse";
-import { dbStatus, ensureSchema, analyzeBackup, importBackup } from "./server-db-import.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const BASIC_AUTH_USER = process.env.BASIC_AUTH_USER || "";
 const BASIC_AUTH_PASSWORD = process.env.BASIC_AUTH_PASSWORD || "";
 const MAX_REQUEST_BYTES = process.env.MAX_REQUEST_BYTES || "2mb";
@@ -65,86 +64,199 @@ function maskDatabaseUrl(url) {
   }
 }
 
+async function createPool() {
+  if (!DATABASE_URL) return null;
+  const mod = await import("pg");
+  const Pool = mod.default?.Pool || mod.Pool;
+  return new Pool({ connectionString: DATABASE_URL });
+}
+
+async function dbStatus() {
+  const pool = await createPool();
+  if (!pool) return { configured: false, reachable: false, tablesReady: false, note: "DATABASE_URL ist nicht gesetzt." };
+  try {
+    const ping = await pool.query("select 1 as ok");
+    const tables = await pool.query(`
+      select table_name from information_schema.tables
+      where table_schema='public'
+      and table_name in ('users','projects','scenarios','project_scenarios','scenario_versions','phase_sets','consulting_cases','audit_log')
+      order by table_name
+    `);
+    const names = tables.rows.map((r) => r.table_name);
+    const required = ["users", "projects", "scenarios", "project_scenarios", "scenario_versions", "phase_sets", "consulting_cases", "audit_log"];
+    const missing = required.filter((x) => !names.includes(x));
+    return {
+      configured: true,
+      reachable: ping.rows?.[0]?.ok === 1,
+      tablesReady: missing.length === 0,
+      existingTables: names,
+      missingTables: missing,
+      note: missing.length ? "Datenbank erreichbar, aber Tabellen fehlen." : "Datenbank erreichbar und Basistabellen vorhanden."
+    };
+  } catch (error) {
+    return { configured: true, reachable: false, tablesReady: false, note: String(error?.message || error).slice(0, 800) };
+  } finally {
+    await pool.end().catch(() => {});
+  }
+}
+
+async function ensureSchema() {
+  const pool = await createPool();
+  if (!pool) throw new Error("DATABASE_URL ist nicht gesetzt.");
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await client.query(`
+      create table if not exists users (id text primary key, email text unique, display_name text, role text not null default 'owner', created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+      create table if not exists projects (id text primary key, user_id text not null references users(id) on delete cascade, title text not null, description text, status text not null default 'Vorbereitung', priority text not null default 'mittel', tags jsonb, decision_need text, next_step text, boundaries text, notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), archived_at timestamptz);
+      create table if not exists scenarios (id text primary key, user_id text not null references users(id) on delete cascade, title text not null, name text, description text, current_version_id text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), archived_at timestamptz);
+      create table if not exists project_scenarios (id text primary key, project_id text not null references projects(id) on delete cascade, scenario_id text not null references scenarios(id) on delete cascade, relation_type text not null default 'contains', sort_order integer not null default 0, created_at timestamptz not null default now(), unique(project_id, scenario_id));
+      create table if not exists scenario_versions (id text primary key, scenario_id text not null references scenarios(id) on delete cascade, version_number integer not null, source text, state_json jsonb not null, note text, created_by text, created_at timestamptz not null default now(), unique(scenario_id, version_number));
+      create table if not exists phase_sets (id text primary key, user_id text not null references users(id) on delete cascade, name text not null, phases jsonb not null, is_builtin boolean not null default false, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+      create table if not exists scenario_phases (id text primary key, scenario_id text not null references scenarios(id) on delete cascade, scenario_version_id text, phase_set_id text, phases_json jsonb not null, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+      create table if not exists scenario_relations (id text primary key, scenario_id text not null references scenarios(id) on delete cascade, scenario_version_id text, relations_json jsonb not null, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+      create table if not exists consulting_cases (id text primary key, user_id text not null references users(id) on delete cascade, project_id text references projects(id) on delete set null, scenario_id text references scenarios(id) on delete set null, title text not null, status text not null default 'Vorbereitung', priority text not null default 'mittel', mandate text, decision_need text, deliverable text, boundaries text, consulting_notes text, reflection text, todos jsonb, journal jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+      create table if not exists reports (id text primary key, user_id text not null references users(id) on delete cascade, project_id text references projects(id) on delete set null, scenario_id text references scenarios(id) on delete set null, report_type text not null, title text not null, content text, content_json jsonb, created_at timestamptz not null default now());
+      create table if not exists imports (id text primary key, user_id text not null references users(id) on delete cascade, project_id text references projects(id) on delete set null, filename text, document_type text, analysis_mode text, extracted_text text, draft_json jsonb, created_at timestamptz not null default now());
+      create table if not exists audit_log (id text primary key, user_id text references users(id) on delete set null, entity_type text not null, entity_id text, action text not null, metadata jsonb, created_at timestamptz not null default now());
+    `);
+    await client.query("commit");
+    return await dbStatus();
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+    await pool.end().catch(() => {});
+  }
+}
+
+function normalizeBackup(raw) {
+  if (raw?.schema === "ki-kernel-local-backup") return raw.data || {};
+  if (raw?.data && (raw.data.projects || raw.data.scenarios || raw.data.phaseSets)) return raw.data;
+  return raw || {};
+}
+
+function analyzeBackup(raw) {
+  const data = normalizeBackup(raw);
+  const projects = Array.isArray(data.projects) ? data.projects : [];
+  const scenarios = Array.isArray(data.scenarios) ? data.scenarios : [];
+  const phaseSets = Array.isArray(data.phaseSets) ? data.phaseSets : [];
+  const consultingCases = Array.isArray(data.consultingCases) ? data.consultingCases : [];
+  const importDrafts = Array.isArray(data.importDrafts) ? data.importDrafts : [];
+  const missingScenarioRefs = projects.flatMap((project) => (Array.isArray(project.scenarioIds) ? project.scenarioIds : [])
+    .filter((scenarioId) => !scenarios.some((scenario) => scenario.id === scenarioId))
+    .map((scenarioId) => ({ projectId: project.id, projectTitle: project.title, scenarioId })));
+  return {
+    ok: true,
+    counts: { projects: projects.length, scenarios: scenarios.length, phaseSets: phaseSets.length, consultingCases: consultingCases.length, importDrafts: importDrafts.length },
+    missingScenarioRefs,
+    warnings: missingScenarioRefs.length ? ["Einige Projekt-Szenario-Verweise zeigen auf nicht vorhandene Szenarien."] : []
+  };
+}
+
+function uid(prefix = "id") {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+}
+
+async function importBackup(raw, options = {}) {
+  const { confirmation } = options;
+  if (confirmation !== "IMPORT IN DATENBANK") throw new Error("Bestätigungsphrase fehlt. Erforderlich: IMPORT IN DATENBANK");
+  const data = normalizeBackup(raw);
+  const projects = Array.isArray(data.projects) ? data.projects : [];
+  const scenarios = Array.isArray(data.scenarios) ? data.scenarios : [];
+  const phaseSets = Array.isArray(data.phaseSets) ? data.phaseSets : [];
+  const consultingCases = Array.isArray(data.consultingCases) ? data.consultingCases : [];
+  const analysis = analyzeBackup(raw);
+  const pool = await createPool();
+  if (!pool) throw new Error("DATABASE_URL ist nicht gesetzt.");
+  const client = await pool.connect();
+  const userId = "local_owner";
+  const imported = { users: 0, projects: 0, scenarios: 0, projectScenarios: 0, scenarioVersions: 0, phaseSets: 0, consultingCases: 0, auditLog: 0 };
+  try {
+    await client.query("begin");
+    await client.query("insert into users(id,email,display_name,role) values($1,$2,$3,$4) on conflict(id) do update set updated_at=now()", [userId, null, "Local Owner", "owner"]);
+    imported.users = 1;
+    for (const s of scenarios) {
+      const id = s.id || uid("scenario");
+      const title = s.state?.context?.title || s.name || "Szenario";
+      await client.query("insert into scenarios(id,user_id,title,name,description,created_at,updated_at) values($1,$2,$3,$4,$5,now(),now()) on conflict(id) do update set title=excluded.title,name=excluded.name,description=excluded.description,updated_at=now()", [id, userId, title, s.name || title, s.state?.context?.decisionQuestion || null]);
+      const versionId = `version_${id}_1`;
+      await client.query("insert into scenario_versions(id,scenario_id,version_number,source,state_json,note,created_by) values($1,$2,1,$3,$4,$5,$6) on conflict(scenario_id,version_number) do update set state_json=excluded.state_json,note=excluded.note", [versionId, id, "localStorage-import", JSON.stringify(s.state || {}), "Import aus LocalStorage-Backup", userId]);
+      await client.query("update scenarios set current_version_id=$1 where id=$2", [versionId, id]);
+      imported.scenarios += 1;
+      imported.scenarioVersions += 1;
+    }
+    for (const p of projects) {
+      const id = p.id || uid("project");
+      await client.query("insert into projects(id,user_id,title,description,status,priority,tags,decision_need,next_step,boundaries,notes,created_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now(),now()) on conflict(id) do update set title=excluded.title,description=excluded.description,status=excluded.status,priority=excluded.priority,tags=excluded.tags,decision_need=excluded.decision_need,next_step=excluded.next_step,boundaries=excluded.boundaries,notes=excluded.notes,updated_at=now()", [id, userId, p.title || "Projekt", p.description || null, p.status || "Vorbereitung", p.priority || "mittel", JSON.stringify(p.tags || []), p.decisionNeed || null, p.nextStep || null, p.boundaries || null, p.notes || null]);
+      imported.projects += 1;
+      let order = 0;
+      for (const scenarioId of Array.isArray(p.scenarioIds) ? p.scenarioIds : []) {
+        if (!scenarios.some((s) => s.id === scenarioId)) continue;
+        await client.query("insert into project_scenarios(id,project_id,scenario_id,relation_type,sort_order) values($1,$2,$3,'contains',$4) on conflict(project_id,scenario_id) do update set sort_order=excluded.sort_order", [`ps_${id}_${scenarioId}`, id, scenarioId, order++]);
+        imported.projectScenarios += 1;
+      }
+    }
+    for (const set of phaseSets) {
+      const id = set.id || uid("phase_set");
+      await client.query("insert into phase_sets(id,user_id,name,phases,is_builtin,created_at,updated_at) values($1,$2,$3,$4,false,now(),now()) on conflict(id) do update set name=excluded.name,phases=excluded.phases,updated_at=now()", [id, userId, set.name || "Phasen-Set", JSON.stringify(set.phases || [])]);
+      imported.phaseSets += 1;
+    }
+    for (const c of consultingCases) {
+      const id = c.id || uid("case");
+      await client.query("insert into consulting_cases(id,user_id,title,status,priority,mandate,decision_need,deliverable,boundaries,consulting_notes,reflection,todos,journal,created_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) on conflict(id) do update set title=excluded.title,status=excluded.status,priority=excluded.priority,mandate=excluded.mandate,decision_need=excluded.decision_need,deliverable=excluded.deliverable,boundaries=excluded.boundaries,consulting_notes=excluded.consulting_notes,reflection=excluded.reflection,todos=excluded.todos,journal=excluded.journal,updated_at=now()", [id, userId, c.title || "Beratungsfall", c.status || "Vorbereitung", c.priority || "mittel", c.mandate || null, c.decisionNeed || null, c.deliverable || null, c.boundaries || null, c.consultingNotes || c.notes || null, c.reflection || null, JSON.stringify(c.todos || []), JSON.stringify(c.journal || [])]);
+      imported.consultingCases += 1;
+    }
+    await client.query("insert into audit_log(id,user_id,entity_type,entity_id,action,metadata) values($1,$2,'backup',null,'import_local_backup',$3)", [uid("audit"), userId, JSON.stringify({ imported, analysis })]);
+    imported.auditLog = 1;
+    await client.query("commit");
+    return { imported, analysis };
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+    await pool.end().catch(() => {});
+  }
+}
+
 async function checkDatabase() {
   if (STORAGE_MODE === "local") {
-    return {
-      reachable: null,
-      active: false,
-      note: "Datenbankprüfung übersprungen, weil STORAGE_MODE=local. Die App nutzt weiterhin Browser-LocalStorage als Hauptspeicher."
-    };
+    return { reachable: null, active: false, note: "Datenbankprüfung übersprungen, weil STORAGE_MODE=local. Die App nutzt weiterhin Browser-LocalStorage als Hauptspeicher." };
   }
   const status = await dbStatus();
-  return {
-    reachable: status.reachable,
-    active: true,
-    note: status.note,
-    tablesReady: status.tablesReady,
-    missingTables: status.missingTables || []
-  };
+  return { reachable: status.reachable, active: true, note: status.note, tablesReady: status.tablesReady, missingTables: status.missingTables || [] };
 }
 
 app.get("/api/health", async (_req, res) => {
   const db = await checkDatabase();
-  res.json({
-    ok: true,
-    appVersion: "2.0-controlled-db-import",
-    model: OPENAI_MODEL,
-    openaiConfigured: Boolean(OPENAI_API_KEY),
-    databaseConfigured: Boolean(DATABASE_URL),
-    databaseActive: db.active,
-    databaseReachable: db.reachable,
-    databaseReachableNote: db.note,
-    databaseTablesReady: db.tablesReady ?? null,
-    databaseMissingTables: db.missingTables ?? [],
-    databaseUrlPreview: maskDatabaseUrl(DATABASE_URL),
-    storageMode: STORAGE_MODE,
-    allowedStorageModes: ["local", "hybrid", "db"],
-    maxRequestBytes: MAX_REQUEST_BYTES,
-    maxUploadBytes: MAX_UPLOAD_BYTES,
-    basicAuthEnabled: Boolean(BASIC_AUTH_USER && BASIC_AUTH_PASSWORD)
-  });
+  res.json({ ok: true, appVersion: "2.0-controlled-db-import-inline", model: OPENAI_MODEL, openaiConfigured: Boolean(OPENAI_API_KEY), databaseConfigured: Boolean(DATABASE_URL), databaseActive: db.active, databaseReachable: db.reachable, databaseReachableNote: db.note, databaseTablesReady: db.tablesReady ?? null, databaseMissingTables: db.missingTables ?? [], databaseUrlPreview: maskDatabaseUrl(DATABASE_URL), storageMode: STORAGE_MODE, allowedStorageModes: ["local", "hybrid", "db"], maxRequestBytes: MAX_REQUEST_BYTES, maxUploadBytes: MAX_UPLOAD_BYTES, basicAuthEnabled: Boolean(BASIC_AUTH_USER && BASIC_AUTH_PASSWORD) });
 });
 
 app.get("/api/db/status", async (_req, res) => {
-  try {
-    const status = await dbStatus();
-    res.json({ ok: true, storageMode: STORAGE_MODE, ...status });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { res.json({ ok: true, storageMode: STORAGE_MODE, ...(await dbStatus()) }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 
 app.post("/api/db/ensure-schema", async (req, res) => {
   try {
-    const confirmation = req.body?.confirmation;
-    if (confirmation !== "SCHEMA ANLEGEN") {
-      return res.status(400).json({ ok: false, error: "Bestätigungsphrase fehlt. Erforderlich: SCHEMA ANLEGEN" });
-    }
-    const status = await ensureSchema();
-    res.json({ ok: true, status });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+    if (req.body?.confirmation !== "SCHEMA ANLEGEN") return res.status(400).json({ ok: false, error: "Bestätigungsphrase fehlt. Erforderlich: SCHEMA ANLEGEN" });
+    res.json({ ok: true, status: await ensureSchema() });
+  } catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 
 app.post("/api/db/import-backup/dry-run", async (req, res) => {
-  try {
-    const analysis = analyzeBackup(req.body || {});
-    res.json({ ok: true, dryRun: true, analysis });
-  } catch (error) {
-    res.status(400).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { res.json({ ok: true, dryRun: true, analysis: analyzeBackup(req.body || {}) }); }
+  catch (error) { res.status(400).json({ ok: false, error: String(error?.message || error) }); }
 });
 
 app.post("/api/db/import-backup", async (req, res) => {
   try {
     const { backup, confirmation } = req.body || {};
     if (!backup) return res.status(400).json({ ok: false, error: "backup fehlt." });
-    const result = await importBackup(backup, { dryRun: false, confirmation });
-    res.json({ ok: true, result });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+    res.json({ ok: true, result: await importBackup(backup, { confirmation }) });
+  } catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 
 function fileExtension(name = "") {
@@ -157,17 +269,10 @@ app.post("/api/extract-document", upload.single("file"), async (req, res) => {
     if (!file) return res.status(400).json({ error: "Keine Datei übermittelt." });
     const ext = fileExtension(file.originalname);
     let text = "";
-    if (["txt", "md", "json"].includes(ext) || file.mimetype?.startsWith("text/")) {
-      text = file.buffer.toString("utf8");
-    } else if (ext === "docx" || file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-      const result = await mammoth.extractRawText({ buffer: file.buffer });
-      text = result.value || "";
-    } else if (ext === "pdf" || file.mimetype === "application/pdf") {
-      const result = await pdfParse(file.buffer);
-      text = result.text || "";
-    } else {
-      return res.status(400).json({ error: "Dateityp nicht unterstützt. Unterstützt: TXT, MD, JSON, DOCX, PDF." });
-    }
+    if (["txt", "md", "json"].includes(ext) || file.mimetype?.startsWith("text/")) text = file.buffer.toString("utf8");
+    else if (ext === "docx" || file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") text = (await mammoth.extractRawText({ buffer: file.buffer })).value || "";
+    else if (ext === "pdf" || file.mimetype === "application/pdf") text = (await pdfParse(file.buffer)).text || "";
+    else return res.status(400).json({ error: "Dateityp nicht unterstützt. Unterstützt: TXT, MD, JSON, DOCX, PDF." });
     const clean = text.replace(/\u0000/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{4,}/g, "\n\n\n").trim();
     if (!clean) return res.status(422).json({ error: "Es konnte kein Text extrahiert werden. Bei gescannten PDFs ist OCR nötig; das ist noch nicht aktiviert." });
     res.json({ filename: file.originalname, mimeType: file.mimetype, bytes: file.size, characters: clean.length, text: clean.slice(0, 120000), truncated: clean.length > 120000 });
@@ -181,20 +286,7 @@ const reportSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    "Executive Summary": { type: "string" },
-    "Ausgangslage": { type: "string" },
-    "Simulationsannahmen": { type: "string" },
-    "Persona- und Stakeholderanalyse": { type: "string" },
-    "Ressourcen- und Risikolage": { type: "string" },
-    "Phasenanalyse": { type: "string" },
-    "Konflikt- und Koalitionsmuster": { type: "string" },
-    "Kritische Kipppunkte": { type: "string" },
-    "Interventionsoptionen": { type: "string" },
-    "Entscheidungsmatrix": { type: "string" },
-    "Maßnahmenplan": { type: "string" },
-    "Offene Fragen": { type: "string" },
-    "Datenschutz-/Governance-Hinweise": { type: "string" },
-    "Grenzen der Simulation": { type: "string" }
+    "Executive Summary": { type: "string" }, "Ausgangslage": { type: "string" }, "Simulationsannahmen": { type: "string" }, "Persona- und Stakeholderanalyse": { type: "string" }, "Ressourcen- und Risikolage": { type: "string" }, "Phasenanalyse": { type: "string" }, "Konflikt- und Koalitionsmuster": { type: "string" }, "Kritische Kipppunkte": { type: "string" }, "Interventionsoptionen": { type: "string" }, "Entscheidungsmatrix": { type: "string" }, "Maßnahmenplan": { type: "string" }, "Offene Fragen": { type: "string" }, "Datenschutz-/Governance-Hinweise": { type: "string" }, "Grenzen der Simulation": { type: "string" }
   },
   required: ["Executive Summary", "Ausgangslage", "Simulationsannahmen", "Persona- und Stakeholderanalyse", "Ressourcen- und Risikolage", "Phasenanalyse", "Konflikt- und Koalitionsmuster", "Kritische Kipppunkte", "Interventionsoptionen", "Entscheidungsmatrix", "Maßnahmenplan", "Offene Fragen", "Datenschutz-/Governance-Hinweise", "Grenzen der Simulation"]
 };
@@ -204,18 +296,15 @@ const scenarioSchema = {
   additionalProperties: false,
   properties: {
     context: { type: "object", additionalProperties: false, properties: { title: { type: "string" }, domain: { type: "string" }, decisionQuestion: { type: "string" }, goal: { type: "string" }, boundaries: { type: "string" } }, required: ["title", "domain", "decisionQuestion", "goal", "boundaries"] },
-    assumptions: { type: "array", items: { type: "object", additionalProperties: true } },
-    personas: { type: "array", items: { type: "object", additionalProperties: true } },
-    resources: { type: "array", items: { type: "object", additionalProperties: true } },
-    interventions: { type: "array", items: { type: "object", additionalProperties: true } },
-    strategies: { type: "array", items: { type: "object", additionalProperties: true } },
-    openQuestions: { type: "array", items: { type: "string" } },
-    warnings: { type: "array", items: { type: "string" } }
+    assumptions: { type: "array", items: { type: "object", additionalProperties: true } }, personas: { type: "array", items: { type: "object", additionalProperties: true } }, resources: { type: "array", items: { type: "object", additionalProperties: true } }, interventions: { type: "array", items: { type: "object", additionalProperties: true } }, strategies: { type: "array", items: { type: "object", additionalProperties: true } }, openQuestions: { type: "array", items: { type: "string" } }, warnings: { type: "array", items: { type: "string" } }
   },
   required: ["context", "assumptions", "personas", "resources", "interventions", "strategies", "openQuestions", "warnings"]
 };
 
-function requireOpenAI(res) { if (!openai) { res.status(500).json({ error: "OPENAI_API_KEY fehlt. Setze die Variable in Coolify oder lokal in deiner Umgebung." }); return false; } return true; }
+function requireOpenAI(res) {
+  if (!openai) { res.status(500).json({ error: "OPENAI_API_KEY fehlt. Setze die Variable in Coolify oder lokal in deiner Umgebung." }); return false; }
+  return true;
+}
 
 app.post("/api/import-scenario", async (req, res) => {
   try {
@@ -223,14 +312,7 @@ app.post("/api/import-scenario", async (req, res) => {
     const { text, documentType = "Konzept", analysisMode = "beratend" } = req.body || {};
     if (!text || typeof text !== "string" || text.trim().length < 80) return res.status(400).json({ error: "Bitte füge einen längeren Konzepttext ein." });
     if (text.length > 45000) return res.status(400).json({ error: "Der Text ist zu lang. Bitte kürzen oder in Abschnitten analysieren." });
-    const response = await openai.responses.create({
-      model: OPENAI_MODEL,
-      input: [
-        { role: "system", content: ["Du bist ein präziser Organisationsberater und Szenarioarchitekt.", "Erzeuge aus dem Dokument einen prüfbaren Szenarioentwurf, keine Diagnose.", "Unterscheide explizit Genanntes, Abgeleitetes und Hypothesen.", "Arbeite nur mit Rollen, Archetypen und anonymisierten Stakeholdern.", "Keine personenbezogene Bewertung, keine Leistungsdiagnostik, keine echten Personenprofile.", "Formuliere auf Deutsch, klar und beratungsfähig."].join("\n") },
-        { role: "user", content: `Dokumenttyp: ${documentType}\nAnalysemodus: ${analysisMode}\n\nErzeuge einen Szenarioentwurf nach dem JSON Schema.\n\nDokument:\n${text}` }
-      ],
-      text: { format: { type: "json_schema", name: "scenario_draft", strict: true, schema: scenarioSchema } }
-    });
+    const response = await openai.responses.create({ model: OPENAI_MODEL, input: [{ role: "system", content: "Du bist ein präziser Organisationsberater und Szenarioarchitekt. Erzeuge aus dem Dokument einen prüfbaren Szenarioentwurf, keine Diagnose. Arbeite nur mit Rollen, Archetypen und anonymisierten Stakeholdern. Formuliere auf Deutsch." }, { role: "user", content: `Dokumenttyp: ${documentType}\nAnalysemodus: ${analysisMode}\n\nErzeuge einen Szenarioentwurf nach dem JSON Schema.\n\nDokument:\n${text}` }], text: { format: { type: "json_schema", name: "scenario_draft", strict: true, schema: scenarioSchema } } });
     res.json(JSON.parse(response.output_text));
   } catch (error) {
     console.error("/api/import-scenario error", error);
@@ -243,14 +325,7 @@ app.post("/api/simulate", async (req, res) => {
     if (!requireOpenAI(res)) return;
     const { state } = req.body || {};
     if (!state || typeof state !== "object") return res.status(400).json({ error: "state fehlt oder ist ungültig" });
-    const response = await openai.responses.create({
-      model: OPENAI_MODEL,
-      input: [
-        { role: "system", content: ["Du bist ein präziser Organisationsberater für KI-Readiness, Qualitätsmanagement, Beteiligung und Veränderungsprozesse.", "Behandle alle Eingaben als Hypothesen, nicht als Tatsachendiagnose.", "Erzeuge keine personenbezogene Leistungs-, Verhaltens- oder Widerstandsdiagnostik.", "Arbeite mit Rollen, Archetypen und anonymisierten Stakeholdern.", "Formuliere in deutscher Sprache, klar, beratungsfähig und entscheidungsorientiert.", "Nutze exakt die vorgegebenen deutschen Abschnittsüberschriften aus dem JSON Schema."].join("\n") },
-        { role: "user", content: "Erzeuge einen Beratungsreport nach dem vorgegebenen JSON Schema. Nutze diese Eingabedaten:\n\n" + JSON.stringify(state, null, 2) }
-      ],
-      text: { format: { type: "json_schema", name: "consulting_report", strict: true, schema: reportSchema } }
-    });
+    const response = await openai.responses.create({ model: OPENAI_MODEL, input: [{ role: "system", content: "Du bist ein präziser Organisationsberater. Behandle alle Eingaben als Hypothesen, nicht als Tatsachendiagnose. Nutze exakt die vorgegebenen deutschen Abschnittsüberschriften." }, { role: "user", content: "Erzeuge einen Beratungsreport nach dem vorgegebenen JSON Schema. Nutze diese Eingabedaten:\n\n" + JSON.stringify(state, null, 2) }], text: { format: { type: "json_schema", name: "consulting_report", strict: true, schema: reportSchema } } });
     res.json(JSON.parse(response.output_text));
   } catch (error) {
     console.error("/api/simulate error", error);
@@ -260,5 +335,4 @@ app.post("/api/simulate", async (req, res) => {
 
 app.use(express.static(path.join(__dirname, "dist")));
 app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "dist", "index.html")));
-
 app.listen(PORT, () => console.log(`KI-Kernel GPT läuft auf Port ${PORT}`));
