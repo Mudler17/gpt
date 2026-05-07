@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import multer from "multer";
 
 import { DATABASE_URL, STORAGE_MODE, maskDatabaseUrl, dbStatus, ensureSchema } from "./server/db.js";
-import { dbCounts, dbAuditLog, dbProjects, dbProjectDetail, dbScenarios, dbScenarioDetail, dbAssignments } from "./server/db-inspection.js";
+import { dbCounts, dbAuditLog, dbProjects, dbProjectDetail, dbScenarios, dbScenarioDetail, dbAssignments, assignScenarioToProject, unassignScenarioFromProject } from "./server/db-inspection.js";
 import { analyzeBackup, importBackup } from "./server/db-import.js";
 import { extractDocumentHandler, importScenarioHandler, simulateHandler } from "./server/openai-routes.js";
 
@@ -64,20 +64,14 @@ async function checkDatabaseForHealth() {
     };
   }
   const status = await dbStatus();
-  return {
-    active: true,
-    reachable: status.reachable,
-    tablesReady: status.tablesReady,
-    missingTables: status.missingTables || [],
-    note: status.note
-  };
+  return { active: true, reachable: status.reachable, tablesReady: status.tablesReady, missingTables: status.missingTables || [], note: status.note };
 }
 
 app.get("/api/health", async (_req, res) => {
   const db = await checkDatabaseForHealth();
   res.json({
     ok: true,
-    appVersion: "2.3-db-detail-restore",
+    appVersion: "2.4-assignment-editing",
     model: OPENAI_MODEL,
     openaiConfigured: Boolean(OPENAI_API_KEY),
     databaseConfigured: Boolean(DATABASE_URL),
@@ -96,90 +90,62 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.get("/api/db/status", async (_req, res) => {
-  try {
-    res.json({ ok: true, storageMode: STORAGE_MODE, ...(await dbStatus()) });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { res.json({ ok: true, storageMode: STORAGE_MODE, ...(await dbStatus()) }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.get("/api/db/counts", async (_req, res) => {
-  try {
-    res.json({ ok: true, ...(await dbCounts()) });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { res.json({ ok: true, ...(await dbCounts()) }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.get("/api/db/audit-log", async (req, res) => {
-  try {
-    res.json({ ok: true, items: await dbAuditLog(req.query.limit) });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { res.json({ ok: true, items: await dbAuditLog(req.query.limit) }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.get("/api/db/projects", async (_req, res) => {
-  try {
-    res.json({ ok: true, items: await dbProjects() });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { res.json({ ok: true, items: await dbProjects() }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.get("/api/db/projects/:id", async (req, res) => {
-  try {
-    const detail = await dbProjectDetail(req.params.id);
-    if (!detail) return res.status(404).json({ ok: false, error: "Projekt nicht gefunden." });
-    res.json({ ok: true, ...detail });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { const detail = await dbProjectDetail(req.params.id); if (!detail) return res.status(404).json({ ok: false, error: "Projekt nicht gefunden." }); res.json({ ok: true, ...detail }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.get("/api/db/scenarios", async (_req, res) => {
-  try {
-    res.json({ ok: true, items: await dbScenarios() });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { res.json({ ok: true, items: await dbScenarios() }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.get("/api/db/scenarios/:id", async (req, res) => {
-  try {
-    const detail = await dbScenarioDetail(req.params.id);
-    if (!detail) return res.status(404).json({ ok: false, error: "Szenario nicht gefunden." });
-    res.json({ ok: true, ...detail });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { const detail = await dbScenarioDetail(req.params.id); if (!detail) return res.status(404).json({ ok: false, error: "Szenario nicht gefunden." }); res.json({ ok: true, ...detail }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.get("/api/db/assignments", async (_req, res) => {
+  try { res.json({ ok: true, ...(await dbAssignments()) }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
+});
+app.post("/api/db/assign", async (req, res) => {
   try {
-    res.json({ ok: true, ...(await dbAssignments()) });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+    const { projectId, scenarioId, relationType = "contains", sortOrder = null, confirmation } = req.body || {};
+    if (confirmation !== "ZUORDNUNG SPEICHERN") return res.status(400).json({ ok: false, error: "Bestätigungsphrase fehlt. Erforderlich: ZUORDNUNG SPEICHERN" });
+    res.json({ ok: true, result: await assignScenarioToProject({ projectId, scenarioId, relationType, sortOrder }) });
+  } catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
+});
+app.post("/api/db/unassign", async (req, res) => {
+  try {
+    const { projectId, scenarioId, confirmation } = req.body || {};
+    if (confirmation !== "ZUORDNUNG ENTFERNEN") return res.status(400).json({ ok: false, error: "Bestätigungsphrase fehlt. Erforderlich: ZUORDNUNG ENTFERNEN" });
+    res.json({ ok: true, result: await unassignScenarioFromProject({ projectId, scenarioId }) });
+  } catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.post("/api/db/ensure-schema", async (req, res) => {
-  try {
-    if (req.body?.confirmation !== "SCHEMA ANLEGEN") {
-      return res.status(400).json({ ok: false, error: "Bestätigungsphrase fehlt. Erforderlich: SCHEMA ANLEGEN" });
-    }
-    res.json({ ok: true, status: await ensureSchema() });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { if (req.body?.confirmation !== "SCHEMA ANLEGEN") return res.status(400).json({ ok: false, error: "Bestätigungsphrase fehlt. Erforderlich: SCHEMA ANLEGEN" }); res.json({ ok: true, status: await ensureSchema() }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.post("/api/db/import-backup/dry-run", async (req, res) => {
-  try {
-    res.json({ ok: true, dryRun: true, analysis: analyzeBackup(req.body || {}) });
-  } catch (error) {
-    res.status(400).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { res.json({ ok: true, dryRun: true, analysis: analyzeBackup(req.body || {}) }); }
+  catch (error) { res.status(400).json({ ok: false, error: String(error?.message || error) }); }
 });
 app.post("/api/db/import-backup", async (req, res) => {
-  try {
-    const { backup, confirmation } = req.body || {};
-    if (!backup) return res.status(400).json({ ok: false, error: "backup fehlt." });
-    res.json({ ok: true, result: await importBackup(backup, confirmation) });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: String(error?.message || error) });
-  }
+  try { const { backup, confirmation } = req.body || {}; if (!backup) return res.status(400).json({ ok: false, error: "backup fehlt." }); res.json({ ok: true, result: await importBackup(backup, confirmation) }); }
+  catch (error) { res.status(500).json({ ok: false, error: String(error?.message || error) }); }
 });
 
 app.post("/api/extract-document", upload.single("file"), extractDocumentHandler);
