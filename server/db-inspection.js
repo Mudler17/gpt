@@ -1,5 +1,9 @@
 import { withDb } from "./db.js";
 
+function uid(prefix = "id") {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+}
+
 export async function dbCounts() {
   return await withDb(async (pool) => {
     const tables = [
@@ -150,6 +154,70 @@ export async function dbScenarioDetail(id) {
       state: currentVersion.state_json || {}
     } : null;
     return { scenario, currentVersion, versions, projects, localStoragePackage };
+  });
+}
+
+export async function assignScenarioToProject({ projectId, scenarioId, relationType = "contains", sortOrder = null }) {
+  if (!projectId || !scenarioId) throw new Error("projectId und scenarioId sind erforderlich.");
+  return await withDb(async (pool) => {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const project = (await client.query("select id, title from projects where id=$1", [projectId])).rows[0];
+      const scenario = (await client.query("select id, title from scenarios where id=$1", [scenarioId])).rows[0];
+      if (!project) throw new Error("Projekt nicht gefunden.");
+      if (!scenario) throw new Error("Szenario nicht gefunden.");
+      const orderResult = sortOrder === null || sortOrder === undefined || sortOrder === ""
+        ? await client.query("select coalesce(max(sort_order), -1) + 1 as next_order from project_scenarios where project_id=$1", [projectId])
+        : { rows: [{ next_order: Number(sortOrder) || 0 }] };
+      const finalSortOrder = Number(orderResult.rows[0].next_order) || 0;
+      await client.query(
+        `insert into project_scenarios(id, project_id, scenario_id, relation_type, sort_order)
+         values($1,$2,$3,$4,$5)
+         on conflict(project_id, scenario_id)
+         do update set relation_type=excluded.relation_type, sort_order=excluded.sort_order`,
+        [`ps_${projectId}_${scenarioId}`, projectId, scenarioId, relationType || "contains", finalSortOrder]
+      );
+      await client.query("update projects set updated_at=now() where id=$1", [projectId]);
+      await client.query("update scenarios set updated_at=now() where id=$1", [scenarioId]);
+      await client.query(
+        "insert into audit_log(id, entity_type, entity_id, action, metadata) values($1,'project_scenario',$2,'assign_scenario_to_project',$3)",
+        [uid("audit"), `${projectId}:${scenarioId}`, JSON.stringify({ projectId, scenarioId, relationType, sortOrder: finalSortOrder })]
+      );
+      await client.query("commit");
+      return { project, scenario, relationType, sortOrder: finalSortOrder };
+    } catch (error) {
+      await client.query("rollback").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  });
+}
+
+export async function unassignScenarioFromProject({ projectId, scenarioId }) {
+  if (!projectId || !scenarioId) throw new Error("projectId und scenarioId sind erforderlich.");
+  return await withDb(async (pool) => {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const existing = (await client.query("select * from project_scenarios where project_id=$1 and scenario_id=$2", [projectId, scenarioId])).rows[0];
+      if (!existing) throw new Error("Zuordnung nicht gefunden.");
+      await client.query("delete from project_scenarios where project_id=$1 and scenario_id=$2", [projectId, scenarioId]);
+      await client.query("update projects set updated_at=now() where id=$1", [projectId]);
+      await client.query("update scenarios set updated_at=now() where id=$1", [scenarioId]);
+      await client.query(
+        "insert into audit_log(id, entity_type, entity_id, action, metadata) values($1,'project_scenario',$2,'unassign_scenario_from_project',$3)",
+        [uid("audit"), `${projectId}:${scenarioId}`, JSON.stringify({ projectId, scenarioId, previous: existing })]
+      );
+      await client.query("commit");
+      return { removed: true, previous: existing };
+    } catch (error) {
+      await client.query("rollback").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   });
 }
 
