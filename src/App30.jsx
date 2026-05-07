@@ -8,6 +8,49 @@ function hideElement(el) {
   el.setAttribute("aria-hidden", "true");
 }
 
+function isNavigationArea(el) {
+  return Boolean(el?.closest?.("nav,aside,[role='navigation']"));
+}
+
+function hideScenarioHeaderImport() {
+  document.querySelectorAll("button,a,[role='button']").forEach((el) => {
+    if (!el || el.dataset.app30ImportChecked === "true") return;
+    el.dataset.app30ImportChecked = "true";
+
+    if (isNavigationArea(el)) return;
+
+    const text = (el.textContent || "").trim();
+    const title = (el.getAttribute("title") || "").trim();
+    const label = `${text} ${title}`.trim();
+
+    const looksLikeImport = /\bImport\+?\b|Dokumentimport|Dateiimport|importieren/i.test(label);
+    if (!looksLikeImport) return;
+
+    const section = el.closest("section, header, main, div");
+    const context = (section?.textContent || "").slice(0, 1400);
+
+    const inScenarioHead = /Szenario/i.test(context) && !/Eingabe/i.test(context) && !/System/i.test(context);
+    const notCoreAction = !/speichern|laden|duplizieren|löschen|vergleich|bericht|phase/i.test(label.toLowerCase());
+
+    if (inScenarioHead && notCoreAction) hideElement(el);
+  });
+
+  // Falls der Import im Szenario-Kopf als ganze kleine Karte statt als Button gebaut ist.
+  document.querySelectorAll("section,div").forEach((el) => {
+    if (!el || el.dataset.app30ImportCardChecked === "true") return;
+    el.dataset.app30ImportCardChecked = "true";
+    if (isNavigationArea(el)) return;
+
+    const text = (el.textContent || "").trim();
+    if (text.length < 10 || text.length > 450) return;
+    if (!/Import\+|Dokumentimport|Dateiimport/i.test(text)) return;
+    if (!/Szenario|in die Haupt-App|übernehmen/i.test(text)) return;
+    if (/Eingabe|System|Module|Modul/i.test(text)) return;
+
+    hideElement(el);
+  });
+}
+
 function normalizeVisibleApp() {
   const versionPatterns = [
     /KI-Kernel GPT\s*\d+(\.\d+)*/i,
@@ -32,6 +75,8 @@ function normalizeVisibleApp() {
     if (text === "Vergleich") hideElement(el);
     el.dataset.app30CompareChecked = "true";
   });
+
+  hideScenarioHeaderImport();
 
   [...document.querySelectorAll("h1")].forEach((h) => {
     if (h.dataset.app30HeroCompact === "true") return;
