@@ -159,6 +159,8 @@ export async function dbScenarioDetail(id) {
 
 export async function assignScenarioToProject({ projectId, scenarioId, relationType = "contains", sortOrder = null }) {
   if (!projectId || !scenarioId) throw new Error("projectId und scenarioId sind erforderlich.");
+  const allowed = new Set(["contains", "reference", "variant"]);
+  const safeRelationType = allowed.has(relationType) ? relationType : "contains";
   return await withDb(async (pool) => {
     const client = await pool.connect();
     try {
@@ -176,16 +178,16 @@ export async function assignScenarioToProject({ projectId, scenarioId, relationT
          values($1,$2,$3,$4,$5)
          on conflict(project_id, scenario_id)
          do update set relation_type=excluded.relation_type, sort_order=excluded.sort_order`,
-        [`ps_${projectId}_${scenarioId}`, projectId, scenarioId, relationType || "contains", finalSortOrder]
+        [`ps_${projectId}_${scenarioId}`, projectId, scenarioId, safeRelationType, finalSortOrder]
       );
       await client.query("update projects set updated_at=now() where id=$1", [projectId]);
       await client.query("update scenarios set updated_at=now() where id=$1", [scenarioId]);
       await client.query(
         "insert into audit_log(id, entity_type, entity_id, action, metadata) values($1,'project_scenario',$2,'assign_scenario_to_project',$3)",
-        [uid("audit"), `${projectId}:${scenarioId}`, JSON.stringify({ projectId, scenarioId, relationType, sortOrder: finalSortOrder })]
+        [uid("audit"), `${projectId}:${scenarioId}`, JSON.stringify({ projectId, scenarioId, relationType: safeRelationType, sortOrder: finalSortOrder })]
       );
       await client.query("commit");
-      return { project, scenario, relationType, sortOrder: finalSortOrder };
+      return { project, scenario, relationType: safeRelationType, sortOrder: finalSortOrder };
     } catch (error) {
       await client.query("rollback").catch(() => {});
       throw error;
@@ -239,7 +241,13 @@ export async function dbAssignments() {
           s.id,
           s.title,
           count(distinct ps.project_id)::int as project_count,
-          array_agg(distinct p.title) as project_titles
+          array_agg(distinct p.title order by p.title) as project_titles,
+          jsonb_agg(jsonb_build_object(
+            'projectId', p.id,
+            'projectTitle', p.title,
+            'relationType', ps.relation_type,
+            'sortOrder', ps.sort_order
+          ) order by p.title) as relations
         from scenarios s
         join project_scenarios ps on ps.scenario_id = s.id
         join projects p on p.id = ps.project_id
@@ -259,6 +267,23 @@ export async function dbAssignments() {
       `)
     ).rows;
 
-    return { unassignedScenarios, multiProjectScenarios, projectsWithoutScenarios };
+    const relationSummary = (
+      await pool.query(`
+        select relation_type, count(*)::int as count
+        from project_scenarios
+        group by relation_type
+        order by relation_type asc
+      `)
+    ).rows;
+
+    const diagnostics = {
+      problems: [
+        ...unassignedScenarios.map((x) => ({ level: "warning", type: "unassigned_scenario", entityId: x.id, title: x.title, message: "Szenario ist keinem Projekt zugeordnet." })),
+        ...projectsWithoutScenarios.map((x) => ({ level: "warning", type: "project_without_scenario", entityId: x.id, title: x.title, message: "Projekt enthält kein Szenario." }))
+      ],
+      notes: multiProjectScenarios.map((x) => ({ level: "info", type: "multi_project_scenario", entityId: x.id, title: x.title, message: "Szenario wird in mehreren Projekten verwendet. Das ist zulässig, sollte aber transparent bleiben.", relations: x.relations || [] }))
+    };
+
+    return { unassignedScenarios, multiProjectScenarios, projectsWithoutScenarios, relationSummary, diagnostics };
   });
 }
