@@ -1,6 +1,8 @@
 import React, { useEffect } from "react";
 import App28 from "./App28.jsx";
 
+const HERO_SUBTITLE = "Szenarien, Ressourcen, Interventionen und Verläufe beratungsfähig modellieren.";
+
 function hideElement(el) {
   if (!el || el.dataset.app30Hidden === "true") return;
   el.dataset.app30Hidden = "true";
@@ -24,6 +26,21 @@ function hideHorizontalScenarioImportTab() {
 
     if (looksLikeScenarioTabs) hideElement(el);
   });
+}
+
+function normalizeHeroSubtitle(h1) {
+  const box = h1.closest("section, header, div");
+  if (!box) return;
+  const candidates = [...box.querySelectorAll("p,span,div")].filter((el) => {
+    const text = (el.textContent || "").trim();
+    if (!text) return false;
+    if (text === h1.textContent?.trim()) return false;
+    return /Phasen-Sets|Szenarien|Ressourcen|Interventionen|Verläufe|modellieren/i.test(text) && text.length < 180;
+  });
+  const subtitle = candidates[0];
+  if (subtitle && subtitle.textContent.trim() !== HERO_SUBTITLE) {
+    subtitle.textContent = HERO_SUBTITLE;
+  }
 }
 
 function normalizeVisibleApp() {
@@ -54,9 +71,10 @@ function normalizeVisibleApp() {
   hideHorizontalScenarioImportTab();
 
   [...document.querySelectorAll("h1")].forEach((h) => {
-    if (h.dataset.app30HeroCompact === "true") return;
     const text = h.textContent || "";
     if (/Beratungsfähiger Organisationssimulator/i.test(text)) {
+      normalizeHeroSubtitle(h);
+      if (h.dataset.app30HeroCompact === "true") return;
       h.dataset.app30HeroCompact = "true";
       h.style.fontSize = "clamp(30px, 3.5vw, 48px)";
       h.style.lineHeight = "1.02";
