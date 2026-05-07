@@ -20,6 +20,7 @@ function dateMs(value) {
 
 function normalizeTitle(value = "") {
   return String(value || "")
+    .replace(/· DB-Restore Kopie/gi, "")
     .replace(/· DB-Restore/gi, "")
     .replace(/· Sicherung vor DB-Aktualisierung/gi, "")
     .replace(/^Import\+\s*·\s*/i, "")
@@ -31,8 +32,14 @@ function scenarioTitle(item = {}) {
   return item.name || item.title || item?.state?.context?.title || "Unbenanntes Szenario";
 }
 
+function isDbRestoreVariant(item = {}) {
+  const name = String(item.name || "");
+  return /db-restore kopie/i.test(name) || item.variantOfOrigin === "database" || item.localVariantOfOriginScenarioId;
+}
+
 function localOrigin(item = {}) {
   if (item.localBackupOf || /sicherung vor db-aktualisierung/i.test(item.name || "")) return "lokale Sicherung";
+  if (isDbRestoreVariant(item)) return "lokale DB-Variante";
   if (item.source === "database" || item.restoredAt || /db-restore/i.test(item.name || "")) return "DB-Restore";
   if (/^Import\+/.test(item.name || "")) return "Import+ lokal";
   return "lokal";
@@ -46,13 +53,19 @@ function normalizeScenarioDates(item) {
     : validDate(item?.restoredAt) ? item.restoredAt
     : validDate(item?.createdAt) ? item.createdAt
     : fallback;
-  return {
+  const next = {
     ...item,
     date,
     savedAt: validDate(item?.savedAt) ? item.savedAt : date,
     createdAt: validDate(item?.createdAt) ? item.createdAt : date,
     updatedAt: validDate(item?.updatedAt) ? item.updatedAt : date
   };
+  if (isDbRestoreVariant(next) && !next.localVariantOfOriginScenarioId) {
+    next.variantOfOrigin = "database";
+    next.localVariantOfOriginScenarioId = next.originScenarioId || next.id || null;
+    next.source = next.source || "local-variant";
+  }
+  return next;
 }
 
 function repairLocalScenarioDates() {
@@ -62,7 +75,7 @@ function repairLocalScenarioDates() {
     let changed = false;
     const repaired = raw.map((item) => {
       const next = normalizeScenarioDates(item || {});
-      if (next.date !== item?.date || next.savedAt !== item?.savedAt || next.createdAt !== item?.createdAt || next.updatedAt !== item?.updatedAt) changed = true;
+      if (JSON.stringify(next) !== JSON.stringify(item || {})) changed = true;
       return next;
     });
     if (changed) localStorage.setItem(LOCAL_SCENARIOS_KEY, JSON.stringify(repaired));
@@ -170,19 +183,23 @@ function buildConflictRows(localItems, dbItems) {
     const hasLocal = row.local.length > 0;
     const hasDb = row.db.length > 0;
     const restored = row.local.some((x) => localOrigin(x) === "DB-Restore");
+    const localVariant = row.local.some((x) => localOrigin(x) === "lokale DB-Variante");
     const duplicateLocal = row.local.length > 1;
-    const dbNewer = hasLocal && hasDb && restored && dateMs(db?.updated_at || db?.updatedAt) > dateMs(local?.originUpdatedAt || local?.restoredAt || local?.updatedAt);
-    const localEdited = restored && dateMs(local?.updatedAt) > dateMs(local?.restoredAt) + 1000;
+    const directLocal = row.local.find((x) => localOrigin(x) === "DB-Restore") || local;
+    const dbNewer = hasLocal && hasDb && restored && dateMs(db?.updated_at || db?.updatedAt) > dateMs(directLocal?.originUpdatedAt || directLocal?.restoredAt || directLocal?.updatedAt);
+    const localEdited = (restored || localVariant) && dateMs(local?.updatedAt) > dateMs(local?.restoredAt) + 1000;
     const updatePossible = hasDb && (restored || hasLocal || !hasLocal);
     const title = db?.title || db?.name || scenarioTitle(local);
     let status = "Nur lokal";
     let tone = "warn";
     if (hasLocal && hasDb && restored) { status = dbNewer ? "DB neuer · Aktualisierung möglich" : "DB-Restore vorhanden"; tone = dbNewer ? "warn" : "ok"; }
+    else if (hasLocal && hasDb && localVariant) { status = "Lokale Variante eines DB-Restore"; tone = "warn"; }
     else if (hasLocal && hasDb) { status = "Lokal und DB vorhanden"; tone = "info"; }
     else if (!hasLocal && hasDb) { status = "Nur DB"; tone = "info"; }
-    if (localEdited) { status += " · lokale Bearbeitung möglich"; tone = "warn"; }
+    else if (hasLocal && !hasDb && localVariant) { status = "Lokale Variante eines DB-Restore"; tone = "warn"; }
+    if (localEdited && !status.includes("lokale Bearbeitung")) { status += " · lokale Bearbeitung möglich"; tone = "warn"; }
     if (duplicateLocal) { status += " · lokale Doppelung"; tone = "warn"; }
-    return { ...row, title, hasLocal, hasDb, restored, duplicateLocal, dbNewer, localEdited, updatePossible, status, tone };
+    return { ...row, title, hasLocal, hasDb, restored, localVariant, duplicateLocal, dbNewer, localEdited, updatePossible, status, tone };
   }).sort((a, b) => a.title.localeCompare(b.title, "de"));
 }
 
@@ -203,7 +220,8 @@ export default function App24() {
     local: localScenarios.length,
     db: dbScenarios.length,
     restored: conflictRows.filter((x) => x.restored).length,
-    onlyLocal: conflictRows.filter((x) => x.hasLocal && !x.hasDb).length,
+    variants: conflictRows.filter((x) => x.localVariant).length,
+    onlyLocal: conflictRows.filter((x) => x.hasLocal && !x.hasDb && !x.localVariant).length,
     onlyDb: conflictRows.filter((x) => !x.hasLocal && x.hasDb).length,
     both: conflictRows.filter((x) => x.hasLocal && x.hasDb).length,
     duplicates: conflictRows.filter((x) => x.duplicateLocal).length,
@@ -220,7 +238,7 @@ export default function App24() {
   function refreshLocal() {
     repairLocalScenarioDates();
     setLocalScenarios(readLocalScenarios());
-    setLastAction("Lokaler Speicher wurde neu gelesen und Datumsfelder wurden geprüft.");
+    setLastAction("Lokaler Speicher wurde neu gelesen. DB-Restore-Varianten wurden markiert.");
   }
 
   async function loadDbScenarios() {
@@ -269,17 +287,20 @@ export default function App24() {
       const existing = readLocalScenarios();
       const previous = existing.find((x) => x.id === pack.id || normalizeTitle(scenarioTitle(x)) === normalizeTitle(detail.scenario?.title || pack.name));
       const message = previous
-        ? "Lokale Kopie aus der Datenbank aktualisieren? Die aktuelle lokale Kopie wird ersetzt. Optional wird vorher eine Sicherung angelegt."
+        ? "Lokale Kopie aus der Datenbank aktualisieren? Die aktuelle lokale Kopie wird ersetzt. Lokale DB-Varianten bleiben erhalten. Optional wird vorher eine Sicherung angelegt."
         : "Dieses DB-Szenario neu in den lokalen Browser-Speicher übernehmen?";
       if (!window.confirm(message)) return;
       const withBackup = previous && createBackup && window.confirm("Vor dem Überschreiben eine lokale Sicherungskopie anlegen?");
       const restored = makeRestoredScenario(pack, detail, previous);
-      const filtered = existing.filter((x) => x.id !== restored.id && normalizeTitle(scenarioTitle(x)) !== normalizeTitle(detail.scenario?.title || restored.name));
+      const filtered = existing.filter((x) => {
+        const sameDirect = x.id === restored.id || (normalizeTitle(scenarioTitle(x)) === normalizeTitle(detail.scenario?.title || restored.name) && localOrigin(x) !== "lokale DB-Variante");
+        return !sameDirect;
+      });
       const next = [restored, ...(withBackup ? [makeLocalBackup(previous)] : []), ...filtered];
       writeLocalScenarios(next);
       setLocalScenarios(next);
       setSelected(detail);
-      setLastAction(previous ? "Lokale DB-Restore-Kopie wurde kontrolliert aus der Datenbank aktualisiert." : "DB-Szenario wurde neu lokal übernommen.");
+      setLastAction(previous ? "Lokale DB-Restore-Kopie wurde kontrolliert aus der Datenbank aktualisiert. Lokale Varianten wurden geschützt." : "DB-Szenario wurde neu lokal übernommen.");
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -318,7 +339,7 @@ export default function App24() {
         }}
         title="Hybrid-Lesemodus: DB-Szenarien anzeigen, Herkunft und Konflikte prüfen"
       >
-        DB-Lesemodus 2.8
+        DB-Lesemodus 2.8.1
       </button>
 
       {open && (
@@ -340,9 +361,9 @@ export default function App24() {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: ".06em" }}>App 2.8 · kontrollierte Aktualisierung</div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: ".06em" }}>App 2.8.1 · DB-Restore-Varianten</div>
               <h2 style={{ margin: "4px 0 4px", fontSize: 22 }}>DB-Szenarien lesen</h2>
-              <p style={{ margin: 0, color: "#475569", fontSize: 14 }}>Lokale DB-Restore-Kopien können gezielt aus der Datenbank aktualisiert werden. Es wird nichts automatisch überschrieben.</p>
+              <p style={{ margin: 0, color: "#475569", fontSize: 14 }}>Lokale Varianten von DB-Restore-Kopien werden geschützt und nicht als einfache lokale Szenarien behandelt.</p>
             </div>
             <button onClick={() => setOpen(false)} style={{ border: "1px solid #cbd5e1", borderRadius: 12, background: "white", padding: "8px 10px", cursor: "pointer", fontWeight: 900 }}>Schließen</button>
           </div>
@@ -361,6 +382,7 @@ export default function App24() {
               <Pill tone="info">lokal: {conflictSummary.local}</Pill>
               <Pill tone="info">Datenbank: {conflictSummary.db}</Pill>
               <Pill tone="ok">DB-Restore: {conflictSummary.restored}</Pill>
+              <Pill tone={conflictSummary.variants ? "warn" : "ok"}>lokale DB-Varianten: {conflictSummary.variants}</Pill>
               <Pill tone={conflictSummary.onlyLocal ? "warn" : "ok"}>nur lokal: {conflictSummary.onlyLocal}</Pill>
               <Pill tone={conflictSummary.onlyDb ? "info" : "ok"}>nur DB: {conflictSummary.onlyDb}</Pill>
               <Pill tone={conflictSummary.dbNewer ? "warn" : "ok"}>DB neuer: {conflictSummary.dbNewer}</Pill>
@@ -387,13 +409,14 @@ export default function App24() {
                         </div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                           <Pill tone={row.tone}>{row.status}</Pill>
+                          {row.localVariant && <Pill tone="warn">Variante schützen</Pill>}
                           {row.localEdited && <Pill tone="warn">lokale Bearbeitung schützen</Pill>}
                           {row.dbNewer && <Pill tone="warn">DB-Version neuer</Pill>}
                         </div>
                       </div>
                       {row.hasDb && (
                         <button onClick={() => updateLocalFromDb(row.db[0].id)} style={{ border: "1px solid #020617", borderRadius: 14, background: "#020617", color: "white", padding: "9px 11px", cursor: "pointer", fontWeight: 900, whiteSpace: "nowrap" }}>
-                          {row.hasLocal ? "Aus DB aktualisieren" : "Aus DB übernehmen"}
+                          {row.hasLocal ? "Direkten Restore aktualisieren" : "Aus DB übernehmen"}
                         </button>
                       )}
                     </div>
@@ -430,7 +453,7 @@ export default function App24() {
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
                       <button onClick={() => loadDetail(s.id)} style={{ border: "1px solid #cbd5e1", borderRadius: 14, background: "white", padding: "9px 11px", cursor: "pointer", fontWeight: 900, whiteSpace: "nowrap" }}>Details</button>
-                      <button onClick={() => updateLocalFromDb(s.id)} style={{ border: "1px solid #020617", borderRadius: 14, background: "#020617", color: "white", padding: "9px 11px", cursor: "pointer", fontWeight: 900, whiteSpace: "nowrap" }}>{localMatch ? "Aktualisieren" : "Übernehmen"}</button>
+                      <button onClick={() => updateLocalFromDb(s.id)} style={{ border: "1px solid #020617", borderRadius: 14, background: "#020617", color: "white", padding: "9px 11px", cursor: "pointer", fontWeight: 900, whiteSpace: "nowrap" }}>{localMatch ? "Direkten Restore aktualisieren" : "Übernehmen"}</button>
                     </div>
                   </div>
                 </div>
@@ -447,9 +470,9 @@ export default function App24() {
                 <Pill tone={selected.localStoragePackage ? "ok" : "bad"}>Restore-Paket: {selected.localStoragePackage ? "ja" : "nein"}</Pill>
                 {localScenarios.some((x) => x.id === selected.scenario?.id) ? <Pill tone="warn">lokale Kopie mit gleicher ID</Pill> : <Pill tone="info">keine gleiche lokale ID</Pill>}
               </div>
-              <p style={{ color: "#475569", fontSize: 14 }}>Dieses Szenario kann als lokale Kopie in die Haupt-App übernommen oder eine vorhandene DB-Restore-Kopie kontrolliert aktualisiert werden. Die Datenbank bleibt davon unberührt.</p>
+              <p style={{ color: "#475569", fontSize: 14 }}>Dieses Szenario kann als direkte DB-Restore-Kopie aktualisiert werden. Lokale Varianten bleiben geschützt.</p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={restoreSelected} disabled={!selected.localStoragePackage} style={{ border: "1px solid #020617", borderRadius: 14, background: selected.localStoragePackage ? "#020617" : "#cbd5e1", color: "white", padding: "10px 12px", cursor: selected.localStoragePackage ? "pointer" : "not-allowed", fontWeight: 900 }}>Kontrolliert aktualisieren/übernehmen</button>
+                <button onClick={restoreSelected} disabled={!selected.localStoragePackage} style={{ border: "1px solid #020617", borderRadius: 14, background: selected.localStoragePackage ? "#020617" : "#cbd5e1", color: "white", padding: "10px 12px", cursor: selected.localStoragePackage ? "pointer" : "not-allowed", fontWeight: 900 }}>Direkten Restore aktualisieren/übernehmen</button>
                 <button onClick={() => navigator.clipboard?.writeText(JSON.stringify(normalizeScenarioDates(selected.localStoragePackage || selected), null, 2))} style={{ border: "1px solid #cbd5e1", borderRadius: 14, background: "white", padding: "10px 12px", cursor: "pointer", fontWeight: 900 }}>Paket kopieren</button>
               </div>
             </div>
