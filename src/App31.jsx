@@ -5,9 +5,7 @@ const SCENARIO_KEY = "ki-kernel-szenarien-v8";
 const PHASE_SET_KEY = "ki-kernel-phase-sets-v1";
 const PHASE_MODEL_KEY = "ki-kernel-phase-models-v2";
 
-function esc(value) {
-  return String(value ?? "").replace(/[&<>\"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[c]));
-}
+function esc(value) { return String(value ?? "").replace(/[&<>\"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[c])); }
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function arr(x) { return Array.isArray(x) ? x : []; }
 function num(x, fallback = 0) { const n = Number(x); return Number.isFinite(n) ? n : fallback; }
@@ -19,24 +17,17 @@ function readModels() { const parsed = readJson(PHASE_MODEL_KEY, {}); return par
 function writeModels(models) { writeJson(PHASE_MODEL_KEY, models); }
 function stateOf(item) { return item?.state || item?.scenario || item || {}; }
 function titleOf(item) { const s = stateOf(item); return item?.name || s?.context?.title || s?.title || "Unbenanntes Szenario"; }
-function resourceNames(state) {
-  return [...new Set([...arr(state.resources).map((r) => r.name).filter(Boolean), "Vertrauen", "Klarheit", "Energie", "Konfliktspannung", "Zeitdruck"])].slice(0, 8);
-}
-function initialResource(state, name) {
-  const existing = arr(state.resources).find((r) => r.name === name);
-  if (existing) return Math.max(1, Math.min(5, num(existing.current, 3)));
-  if (/konflikt|zeitdruck/i.test(name)) return 3;
-  return 3;
-}
+function modelKey(item, set) { return `${item.id || titleOf(item)}::${set?.key || set?.id || set?.name || "default"}`; }
+function resourceNames(state) { return [...new Set([...arr(state.resources).map((r) => r.name).filter(Boolean), "Vertrauen", "Klarheit", "Energie", "Konfliktspannung", "Zeitdruck"])].slice(0, 8); }
+function initialResource(state, name) { const existing = arr(state.resources).find((r) => r.name === name); if (existing) return Math.max(1, Math.min(5, num(existing.current, 3))); if (/konflikt|zeitdruck/i.test(name)) return 3; return 3; }
+
 const builtInPhaseSets = [
   { id: "change", name: "Change / KI-Einführung", phases: ["Ausgangslage", "Ankündigung", "Beteiligung", "Irritation / Konflikt", "Entscheidung", "Umsetzung", "Nachwirkung"] },
   { id: "workshop", name: "Workshop", phases: ["Vorbereitung", "Einstieg", "Problemklärung", "Arbeitsphase", "Entscheidung / Verdichtung", "Abschluss", "Transfer"] },
   { id: "project", name: "Projekt / Angebot", phases: ["Idee", "Bedarfsprüfung", "Konzept", "Pilot", "Entscheidung", "Skalierung", "Evaluation"] },
   { id: "team", name: "Teamentwicklung", phases: ["Ausgangslage", "Irritation", "Storming", "Klärung", "Vereinbarung", "Erprobung", "Retrospektive"] }
 ];
-function getPhaseSets() {
-  return [...builtInPhaseSets.map((s) => ({ ...s, key: `builtin:${s.id}`, builtin: true })), ...readPhaseSets().map((s) => ({ ...s, key: `custom:${s.id}`, builtin: false }))];
-}
+function getPhaseSets() { return [...builtInPhaseSets.map((s) => ({ ...s, key: `builtin:${s.id}`, builtin: true })), ...readPhaseSets().map((s) => ({ ...s, key: `custom:${s.id}`, builtin: false }))]; }
 function phaseTemplate(name, idx, resources, state) {
   const personaCount = arr(state.personas).length;
   const hasGovNeed = arr(state.assumptions).some((a) => /daten|datenschutz|mav|regel|freigabe|recht|risiko/i.test(`${a.text || ""} ${a.note || ""}`));
@@ -44,54 +35,14 @@ function phaseTemplate(name, idx, resources, state) {
   const isStart = idx === 0;
   const isParticipation = /beteilig|problem|arbeitsphase|klärung/i.test(name);
   const effects = {};
-  resources.forEach((r) => {
-    let value = 0;
-    if (/klarheit/i.test(r) && !isConflict) value = 1;
-    if (/vertrauen/i.test(r) && isParticipation) value = 1;
-    if (/energie/i.test(r) && isConflict) value = -1;
-    if (/konflikt/i.test(r) && isConflict) value = 1;
-    if (/zeitdruck/i.test(r) && /entscheidung|umsetzung|pilot|skalierung/i.test(name)) value = 1;
-    effects[r] = value;
-  });
-  return {
-    id: uid(), name,
-    goal: isStart ? "Ausgangslage, Beteiligte und Entscheidungsrahmen klären." : isParticipation ? "Beteiligung herstellen, Hypothesen prüfen und Arbeitsfähigkeit sichern." : "Phase fachlich konkretisieren und nächste Entscheidung vorbereiten.",
-    dynamic: isConflict ? "Widerstände, Schutzlogiken, informelle Konflikte oder Zielkonflikte werden sichtbar." : "Erwartbare Dynamik beschreiben und Frühindikatoren beobachten.",
-    personaReaction: personaCount ? "Reaktionen der wichtigsten Personas prüfen: Zustimmung, Abwarten, Widerstand, Vermittlung." : "Wahrscheinliche Reaktionen der Beteiligten ergänzen.",
-    intervention: hasGovNeed ? "Governance-, Datenschutz- und Beteiligungsrahmen explizit machen." : isConflict ? "Moderierte Klärung, Konfliktachsen benennen, Schutzbedarfe ernst nehmen." : "Passende Intervention auswählen und Verantwortlichkeit klären.",
-    decisionPoint: isConflict ? "Soll der Prozess verlangsamt, geklärt oder eskaliert werden?" : "Welche Entscheidung ist nötig, damit die nächste Phase tragfähig wird?",
-    risk: isConflict ? 4 : isStart ? 2 : 3,
-    effects
-  };
+  resources.forEach((r) => { let value = 0; if (/klarheit/i.test(r) && !isConflict) value = 1; if (/vertrauen/i.test(r) && isParticipation) value = 1; if (/energie/i.test(r) && isConflict) value = -1; if (/konflikt/i.test(r) && isConflict) value = 1; if (/zeitdruck/i.test(r) && /entscheidung|umsetzung|pilot|skalierung/i.test(name)) value = 1; effects[r] = value; });
+  return { id: uid(), name, goal: isStart ? "Ausgangslage, Beteiligte und Entscheidungsrahmen klären." : isParticipation ? "Beteiligung herstellen, Hypothesen prüfen und Arbeitsfähigkeit sichern." : "Phase fachlich konkretisieren und nächste Entscheidung vorbereiten.", dynamic: isConflict ? "Widerstände, Schutzlogiken, informelle Konflikte oder Zielkonflikte werden sichtbar." : "Erwartbare Dynamik beschreiben und Frühindikatoren beobachten.", personaReaction: personaCount ? "Reaktionen der wichtigsten Personas prüfen: Zustimmung, Abwarten, Widerstand, Vermittlung." : "Wahrscheinliche Reaktionen der Beteiligten ergänzen.", intervention: hasGovNeed ? "Governance-, Datenschutz- und Beteiligungsrahmen explizit machen." : isConflict ? "Moderierte Klärung, Konfliktachsen benennen, Schutzbedarfe ernst nehmen." : "Passende Intervention auswählen und Verantwortlichkeit klären.", decisionPoint: isConflict ? "Soll der Prozess verlangsamt, geklärt oder eskaliert werden?" : "Welche Entscheidung ist nötig, damit die nächste Phase tragfähig wird?", risk: isConflict ? 4 : isStart ? 2 : 3, effects };
 }
-function toneForValue(value, resource) {
-  if (/konflikt|zeitdruck/i.test(resource)) return value >= 4 ? "bad" : value >= 3 ? "warn" : "ok";
-  return value <= 2 ? "bad" : value <= 3 ? "warn" : "ok";
-}
-function colors(tone) {
-  if (tone === "ok") return ["#ecfdf5", "#bbf7d0", "#065f46"];
-  if (tone === "bad") return ["#fff1f2", "#fecdd3", "#9f1239"];
-  if (tone === "warn") return ["#fffbeb", "#fde68a", "#92400e"];
-  return ["#eff6ff", "#bfdbfe", "#1e40af"];
-}
-function pill(text, tone = "info") {
-  const [bg, border, color] = colors(tone);
-  return `<span style="display:inline-flex;align-items:center;border:1px solid ${border};background:${bg};color:${color};border-radius:999px;padding:4px 9px;font-size:12px;font-weight:850">${esc(text)}</span>`;
-}
+function toneForValue(value, resource) { if (/konflikt|zeitdruck/i.test(resource)) return value >= 4 ? "bad" : value >= 3 ? "warn" : "ok"; return value <= 2 ? "bad" : value <= 3 ? "warn" : "ok"; }
+function colors(tone) { if (tone === "ok") return ["#ecfdf5", "#bbf7d0", "#065f46"]; if (tone === "bad") return ["#fff1f2", "#fecdd3", "#9f1239"]; if (tone === "warn") return ["#fffbeb", "#fde68a", "#92400e"]; return ["#eff6ff", "#bfdbfe", "#1e40af"]; }
+function pill(text, tone = "info") { const [bg, border, color] = colors(tone); return `<span style="display:inline-flex;align-items:center;border:1px solid ${border};background:${bg};color:${color};border-radius:999px;padding:4px 9px;font-size:12px;font-weight:850">${esc(text)}</span>`; }
 function clampResource(value) { return Math.max(1, Math.min(5, num(value, 3))); }
-function calculateTrajectories(state, phases, resources) {
-  const data = {};
-  resources.forEach((res) => {
-    let value = initialResource(state, res);
-    data[res] = [{ phase: "Start", value, delta: 0 }];
-    phases.forEach((phase) => {
-      const delta = num(phase.effects?.[res], 0);
-      value = clampResource(value + delta);
-      data[res].push({ phase: phase.name, value, delta });
-    });
-  });
-  return data;
-}
+function calculateTrajectories(state, phases, resources) { const data = {}; resources.forEach((res) => { let value = initialResource(state, res); data[res] = [{ phase: "Start", value, delta: 0 }]; phases.forEach((phase) => { const delta = num(phase.effects?.[res], 0); value = clampResource(value + delta); data[res].push({ phase: phase.name, value, delta }); }); }); return data; }
 function analyzePhases(state, phases, resources) {
   const trajectories = calculateTrajectories(state, phases, resources);
   const tips = [], recommended = [];
@@ -116,40 +67,28 @@ function analyzePhases(state, phases, resources) {
   const overallRisk = Math.round((tips.filter((t) => t.severity === "hoch").length * 2 + tips.filter((t) => t.severity !== "hoch").length) / Math.max(1, phases.length) * 50);
   return { trajectories, tips, recommended, overallRisk: Math.min(100, overallRisk) };
 }
-function buildReport(item, selectedSet, phases, analysis) {
-  return `Verlaufssimulation · Phasen 2.0\n\nSzenario:\n${titleOf(item)}\n\nPhasen-Set:\n${selectedSet?.name || "—"}\n\nKurzbefund:\n${analysis.tips.length ? `Es wurden ${analysis.tips.length} potenzielle Kipppunkte erkannt. Der Verlauf sollte aktiv gesteuert werden.` : "Es wurden keine deutlichen Kipppunkte erkannt. Der Verlauf wirkt aktuell stabil, sollte aber weiter beobachtet werden."}\n\nPhasenverlauf:\n${phases.map((p, i) => `${i + 1}. ${p.name}\nZiel: ${p.goal}\nDynamik: ${p.dynamic}\nPersona-Reaktion: ${p.personaReaction}\nIntervention: ${p.intervention}\nEntscheidungspunkt: ${p.decisionPoint}\nKipprisiko: ${p.risk}/5`).join("\n\n")}\n\nKipppunkte:\n${analysis.tips.map((t) => `- ${t.phase}: ${t.reason}`).join("\n") || "Keine deutlichen Kipppunkte."}\n\nEmpfohlene Interventionen je Phase:\n${analysis.recommended.map((r) => `- ${r.phase}: ${r.intervention} Entscheidungspunkt: ${r.decisionPoint}`).join("\n")}`;
-}
+function buildReport(item, selectedSet, phases, analysis) { return `Verlaufssimulation · Phasen 2.0\n\nSzenario:\n${titleOf(item)}\n\nPhasen-Set:\n${selectedSet?.name || "—"}\n\nKurzbefund:\n${analysis.tips.length ? `Es wurden ${analysis.tips.length} potenzielle Kipppunkte erkannt. Der Verlauf sollte aktiv gesteuert werden.` : "Es wurden keine deutlichen Kipppunkte erkannt. Der Verlauf wirkt aktuell stabil, sollte aber weiter beobachtet werden."}\n\nPhasenverlauf:\n${phases.map((p, i) => `${i + 1}. ${p.name}\nZiel: ${p.goal}\nDynamik: ${p.dynamic}\nPersona-Reaktion: ${p.personaReaction}\nIntervention: ${p.intervention}\nEntscheidungspunkt: ${p.decisionPoint}\nKipprisiko: ${p.risk}/5`).join("\n\n")}\n\nKipppunkte:\n${analysis.tips.map((t) => `- ${t.phase}: ${t.reason}`).join("\n") || "Keine deutlichen Kipppunkte."}\n\nEmpfohlene Interventionen je Phase:\n${analysis.recommended.map((r) => `- ${r.phase}: ${r.intervention} Entscheidungspunkt: ${r.decisionPoint}`).join("\n")}`; }
+
 function renderPhaseDashboard(root) {
+  root.querySelectorAll("[data-phase-dashboard-instance]").forEach((el) => el.remove());
   const saved = readSaved();
   const phaseSets = getPhaseSets();
   const models = readModels();
-  if (!saved.length) {
-    root.innerHTML = `<div style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:16px;padding:14px;font-weight:800">Für Phasen 2.0 wird mindestens ein gespeichertes Szenario benötigt.</div>`;
-    return;
-  }
+  if (!saved.length) { root.innerHTML = `<div data-phase-dashboard-instance="true" style="border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:16px;padding:14px;font-weight:800">Für Phasen 2.0 wird mindestens ein gespeichertes Szenario benötigt.</div>`; return; }
   const scenarioOptions = saved.map((s, i) => `<option value="${i}">${esc(titleOf(s))}</option>`).join("");
   const setOptions = phaseSets.map((s, i) => `<option value="${i}">${s.builtin ? "Standard · " : "Eigenes Set · "}${esc(s.name)}</option>`).join("");
-  root.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px"><div><h2 style="margin:0;font-size:24px;font-weight:950;color:#020617">Phasen</h2><p style="margin:6px 0 0;color:#475569;font-size:14px">Verlaufssimulation mit Ressourcenwirkung, Kipppunkten und Interventionen je Phase.</p></div><button id="ph-reload" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Speicher neu laden</button></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px"><label style="font-weight:900;color:#334155;font-size:14px">Szenario<select id="ph-scenario" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white">${scenarioOptions}</select></label><label style="font-weight:900;color:#334155;font-size:14px">Phasen-Set<select id="ph-set" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white">${setOptions}</select></label><div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><button id="ph-create" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Verlauf erzeugen</button><button id="ph-save" style="border:1px solid #cbd5e1;border-radius:14px;background:white;color:#0f172a;padding:10px 14px;font-weight:900;cursor:pointer">Modell speichern</button></div></div><div id="ph-out"></div>`;
+  root.innerHTML = `<div data-phase-dashboard-instance="true"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px"><div><h2 style="margin:0;font-size:24px;font-weight:950;color:#020617">Phasen</h2><p style="margin:6px 0 0;color:#475569;font-size:14px">Verlaufssimulation mit Ressourcenwirkung, Kipppunkten und Interventionen je Phase.</p></div><button id="ph-reload" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Speicher neu laden</button></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px"><label style="font-weight:900;color:#334155;font-size:14px">Szenario<select id="ph-scenario" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white">${scenarioOptions}</select></label><label style="font-weight:900;color:#334155;font-size:14px">Phasen-Set<select id="ph-set" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white">${setOptions}</select></label><div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><button id="ph-create" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Verlauf erzeugen</button><button id="ph-save" style="border:1px solid #cbd5e1;border-radius:14px;background:white;color:#0f172a;padding:10px 14px;font-weight:900;cursor:pointer">Modell speichern</button></div></div><div id="ph-out"></div></div>`;
   const scenarioSelect = root.querySelector("#ph-scenario"), setSelect = root.querySelector("#ph-set"), out = root.querySelector("#ph-out");
   let phases = [], currentReport = "";
   function currentItem() { return saved[Number(scenarioSelect.value)] || saved[0]; }
   function currentSet() { return phaseSets[Number(setSelect.value)] || phaseSets[0]; }
-  function loadExistingOrCreate() {
-    const item = currentItem();
-    const state = stateOf(item);
-    const resources = resourceNames(state);
-    const existing = models[item.id || titleOf(item)];
-    phases = existing?.phases?.length ? existing.phases : currentSet().phases.map((name, idx) => phaseTemplate(name, idx, resources, state));
-    render();
-  }
+  function createFresh() { const item = currentItem(); const state = stateOf(item); const resources = resourceNames(state); phases = currentSet().phases.map((name, idx) => phaseTemplate(name, idx, resources, state)); render(); }
+  function loadExistingOrCreate({ fresh = false } = {}) { const item = currentItem(); const set = currentSet(); const state = stateOf(item); const resources = resourceNames(state); const existing = models[modelKey(item, set)]; phases = !fresh && existing?.phases?.length ? existing.phases : set.phases.map((name, idx) => phaseTemplate(name, idx, resources, state)); render(); }
   function updatePhase(id, patch) { phases = phases.map((p) => p.id === id ? { ...p, ...patch } : p); render(); }
   function updateEffect(id, resource, value) { phases = phases.map((p) => p.id === id ? { ...p, effects: { ...p.effects, [resource]: num(value, 0) } } : p); render(); }
-  function saveModel() {
-    const item = currentItem(); const all = readModels();
-    all[item.id || titleOf(item)] = { scenarioId: item.id || null, scenarioTitle: titleOf(item), phaseSet: currentSet().name, phases, updatedAt: new Date().toISOString() };
-    writeModels(all); alert("Phasenmodell gespeichert.");
-  }
+  function saveModel() { const item = currentItem(); const set = currentSet(); const all = readModels(); all[modelKey(item, set)] = { scenarioId: item.id || null, scenarioTitle: titleOf(item), phaseSet: set.name, phaseSetKey: set.key, phases, updatedAt: new Date().toISOString() }; writeModels(all); alert("Phasenmodell gespeichert."); }
   function render() {
+    out.innerHTML = "";
     const item = currentItem(), state = stateOf(item), resources = resourceNames(state), analysis = analyzePhases(state, phases, resources);
     currentReport = buildReport(item, currentSet(), phases, analysis);
     const topTone = analysis.overallRisk >= 60 ? "bad" : analysis.overallRisk >= 30 ? "warn" : "ok";
@@ -162,53 +101,14 @@ function renderPhaseDashboard(root) {
     out.querySelector("#ph-txt")?.addEventListener("click", () => { const blob = new Blob([currentReport], { type: "text/plain;charset=utf-8" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "verlaufssimulation-phasen-2-0.txt"; link.click(); URL.revokeObjectURL(link.href); });
   }
   root.querySelector("#ph-reload").onclick = () => integratePhases20(true);
-  root.querySelector("#ph-create").onclick = loadExistingOrCreate;
+  root.querySelector("#ph-create").onclick = () => createFresh();
   root.querySelector("#ph-save").onclick = saveModel;
-  scenarioSelect.onchange = loadExistingOrCreate;
-  setSelect.onchange = () => { phases = []; loadExistingOrCreate(); };
+  scenarioSelect.onchange = () => loadExistingOrCreate();
+  setSelect.onchange = () => loadExistingOrCreate({ fresh: true });
   loadExistingOrCreate();
 }
-function isVisible(el) {
-  if (!el) return false;
-  const style = window.getComputedStyle(el);
-  const rect = el.getBoundingClientRect();
-  return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-}
-function findPhasesSection() {
-  const candidates = [...document.querySelectorAll("section, div")].filter((el) => {
-    if (!isVisible(el)) return false;
-    if (el.dataset.phases20 === "true" || el.closest("[data-phases20='true']")) return false;
-    if (el.closest("[data-dashboard-compare='true'],#clean-db-panel,#consulting-compare-panel")) return false;
-    const txt = (el.textContent || "").trim();
-    if (!txt.startsWith("Phasen") || !txt.includes("Phasen-Set")) return false;
-    if (txt.includes("Vergleich+") || txt.includes("Szenario A") || txt.includes("Szenario B")) return false;
-    if (txt.includes("Verlaufssimulation") || txt.includes("Priorisierte Kipppunkte")) return false;
-    return txt.includes("Phasen erzeugen") || txt.includes("Phasen bearbeiten");
-  });
-  return candidates.sort((a, b) => a.textContent.length - b.textContent.length)[0] || null;
-}
-function integratePhases20(force = false) {
-  const section = findPhasesSection();
-  if (!section) return;
-  if (section.dataset.phases20 === "true" && !force) return;
-  section.dataset.phases20 = "true";
-  section.setAttribute("data-phases20", "true");
-  section.className = "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm";
-  renderPhaseDashboard(section);
-}
-export default function App31() {
-  useEffect(() => {
-    let raf = 0;
-    const run = () => {
-      window.cancelAnimationFrame(raf);
-      raf = window.requestAnimationFrame(() => integratePhases20(false));
-    };
-    run();
-    const observer = new MutationObserver((mutations) => {
-      if (mutations.some((m) => m.addedNodes?.length)) run();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => { window.cancelAnimationFrame(raf); observer.disconnect(); };
-  }, []);
-  return <App30 />;
-}
+function isVisible(el) { if (!el) return false; const style = window.getComputedStyle(el); const rect = el.getBoundingClientRect(); return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0; }
+function hideSiblingPhasePanels(section) { const parent = section.parentElement; if (!parent) return; [...parent.children].forEach((child) => { if (child !== section && /Phasen-Set|Verlaufssimulation|Priorisierte Kipppunkte/i.test(child.textContent || "")) child.style.display = "none"; }); }
+function findPhasesSection() { const existing = document.querySelector("[data-phases20='true']"); if (existing && isVisible(existing)) return existing; const candidates = [...document.querySelectorAll("section, div")].filter((el) => { if (!isVisible(el)) return false; if (el.closest("[data-dashboard-compare='true'],#clean-db-panel,#consulting-compare-panel")) return false; const txt = (el.textContent || "").trim(); if (!txt.startsWith("Phasen") || !txt.includes("Phasen-Set")) return false; if (txt.includes("Vergleich+") || txt.includes("Szenario A") || txt.includes("Szenario B")) return false; if (txt.includes("Verlaufssimulation") || txt.includes("Priorisierte Kipppunkte")) return false; return txt.includes("Phasen erzeugen") || txt.includes("Phasen bearbeiten"); }); return candidates.sort((a, b) => a.textContent.length - b.textContent.length)[0] || null; }
+function integratePhases20(force = false) { const section = findPhasesSection(); if (!section) return; if (section.dataset.phases20 === "true" && !force) return; section.dataset.phases20 = "true"; section.setAttribute("data-phases20", "true"); section.className = "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"; hideSiblingPhasePanels(section); renderPhaseDashboard(section); }
+export default function App31() { useEffect(() => { let raf = 0; const run = () => { window.cancelAnimationFrame(raf); raf = window.requestAnimationFrame(() => integratePhases20(false)); }; run(); const observer = new MutationObserver((mutations) => { if (mutations.some((m) => m.addedNodes?.length)) run(); }); observer.observe(document.body, { childList: true, subtree: true }); return () => { window.cancelAnimationFrame(raf); observer.disconnect(); }; }, []); return <App30 />; }
