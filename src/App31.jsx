@@ -20,14 +20,7 @@ function writeModels(models) { writeJson(PHASE_MODEL_KEY, models); }
 function stateOf(item) { return item?.state || item?.scenario || item || {}; }
 function titleOf(item) { const s = stateOf(item); return item?.name || s?.context?.title || s?.title || "Unbenanntes Szenario"; }
 function resourceNames(state) {
-  return [...new Set([
-    ...arr(state.resources).map((r) => r.name).filter(Boolean),
-    "Vertrauen",
-    "Klarheit",
-    "Energie",
-    "Konfliktspannung",
-    "Zeitdruck"
-  ])].slice(0, 8);
+  return [...new Set([...arr(state.resources).map((r) => r.name).filter(Boolean), "Vertrauen", "Klarheit", "Energie", "Konfliktspannung", "Zeitdruck"])].slice(0, 8);
 }
 function initialResource(state, name) {
   const existing = arr(state.resources).find((r) => r.name === name);
@@ -42,10 +35,7 @@ const builtInPhaseSets = [
   { id: "team", name: "Teamentwicklung", phases: ["Ausgangslage", "Irritation", "Storming", "Klärung", "Vereinbarung", "Erprobung", "Retrospektive"] }
 ];
 function getPhaseSets() {
-  return [
-    ...builtInPhaseSets.map((s) => ({ ...s, key: `builtin:${s.id}`, builtin: true })),
-    ...readPhaseSets().map((s) => ({ ...s, key: `custom:${s.id}`, builtin: false }))
-  ];
+  return [...builtInPhaseSets.map((s) => ({ ...s, key: `builtin:${s.id}`, builtin: true })), ...readPhaseSets().map((s) => ({ ...s, key: `custom:${s.id}`, builtin: false }))];
 }
 function phaseTemplate(name, idx, resources, state) {
   const personaCount = arr(state.personas).length;
@@ -64,8 +54,7 @@ function phaseTemplate(name, idx, resources, state) {
     effects[r] = value;
   });
   return {
-    id: uid(),
-    name,
+    id: uid(), name,
     goal: isStart ? "Ausgangslage, Beteiligte und Entscheidungsrahmen klären." : isParticipation ? "Beteiligung herstellen, Hypothesen prüfen und Arbeitsfähigkeit sichern." : "Phase fachlich konkretisieren und nächste Entscheidung vorbereiten.",
     dynamic: isConflict ? "Widerstände, Schutzlogiken, informelle Konflikte oder Zielkonflikte werden sichtbar." : "Erwartbare Dynamik beschreiben und Frühindikatoren beobachten.",
     personaReaction: personaCount ? "Reaktionen der wichtigsten Personas prüfen: Zustimmung, Abwarten, Widerstand, Vermittlung." : "Wahrscheinliche Reaktionen der Beteiligten ergänzen.",
@@ -105,8 +94,7 @@ function calculateTrajectories(state, phases, resources) {
 }
 function analyzePhases(state, phases, resources) {
   const trajectories = calculateTrajectories(state, phases, resources);
-  const tips = [];
-  const recommended = [];
+  const tips = [], recommended = [];
   phases.forEach((phase, idx) => {
     const after = Object.entries(trajectories).map(([name, series]) => ({ name, value: series[idx + 1]?.value ?? 3, delta: series[idx + 1]?.delta ?? 0 }));
     const critical = after.filter((x) => toneForValue(x.value, x.name) === "bad");
@@ -141,26 +129,9 @@ function renderPhaseDashboard(root) {
   }
   const scenarioOptions = saved.map((s, i) => `<option value="${i}">${esc(titleOf(s))}</option>`).join("");
   const setOptions = phaseSets.map((s, i) => `<option value="${i}">${s.builtin ? "Standard · " : "Eigenes Set · "}${esc(s.name)}</option>`).join("");
-  root.innerHTML = `
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px">
-      <div>
-        <h2 style="margin:0;font-size:24px;font-weight:950;color:#020617">Phasen</h2>
-        <p style="margin:6px 0 0;color:#475569;font-size:14px">Verlaufssimulation mit Ressourcenwirkung, Kipppunkten und Interventionen je Phase.</p>
-      </div>
-      <button id="ph-reload" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Speicher neu laden</button>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px">
-      <label style="font-weight:900;color:#334155;font-size:14px">Szenario<select id="ph-scenario" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white">${scenarioOptions}</select></label>
-      <label style="font-weight:900;color:#334155;font-size:14px">Phasen-Set<select id="ph-set" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white">${setOptions}</select></label>
-      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><button id="ph-create" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Verlauf erzeugen</button><button id="ph-save" style="border:1px solid #cbd5e1;border-radius:14px;background:white;color:#0f172a;padding:10px 14px;font-weight:900;cursor:pointer">Modell speichern</button></div>
-    </div>
-    <div id="ph-out"></div>
-  `;
-  const scenarioSelect = root.querySelector("#ph-scenario");
-  const setSelect = root.querySelector("#ph-set");
-  const out = root.querySelector("#ph-out");
-  let phases = [];
-  let currentReport = "";
+  root.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px"><div><h2 style="margin:0;font-size:24px;font-weight:950;color:#020617">Phasen</h2><p style="margin:6px 0 0;color:#475569;font-size:14px">Verlaufssimulation mit Ressourcenwirkung, Kipppunkten und Interventionen je Phase.</p></div><button id="ph-reload" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Speicher neu laden</button></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px"><label style="font-weight:900;color:#334155;font-size:14px">Szenario<select id="ph-scenario" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white">${scenarioOptions}</select></label><label style="font-weight:900;color:#334155;font-size:14px">Phasen-Set<select id="ph-set" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white">${setOptions}</select></label><div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><button id="ph-create" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Verlauf erzeugen</button><button id="ph-save" style="border:1px solid #cbd5e1;border-radius:14px;background:white;color:#0f172a;padding:10px 14px;font-weight:900;cursor:pointer">Modell speichern</button></div></div><div id="ph-out"></div>`;
+  const scenarioSelect = root.querySelector("#ph-scenario"), setSelect = root.querySelector("#ph-set"), out = root.querySelector("#ph-out");
+  let phases = [], currentReport = "";
   function currentItem() { return saved[Number(scenarioSelect.value)] || saved[0]; }
   function currentSet() { return phaseSets[Number(setSelect.value)] || phaseSets[0]; }
   function loadExistingOrCreate() {
@@ -168,87 +139,27 @@ function renderPhaseDashboard(root) {
     const state = stateOf(item);
     const resources = resourceNames(state);
     const existing = models[item.id || titleOf(item)];
-    if (existing?.phases?.length) phases = existing.phases;
-    else phases = currentSet().phases.map((name, idx) => phaseTemplate(name, idx, resources, state));
+    phases = existing?.phases?.length ? existing.phases : currentSet().phases.map((name, idx) => phaseTemplate(name, idx, resources, state));
     render();
   }
-  function updatePhase(id, patch) {
-    phases = phases.map((p) => p.id === id ? { ...p, ...patch } : p);
-    render();
-  }
-  function updateEffect(id, resource, value) {
-    phases = phases.map((p) => p.id === id ? { ...p, effects: { ...p.effects, [resource]: num(value, 0) } } : p);
-    render();
-  }
+  function updatePhase(id, patch) { phases = phases.map((p) => p.id === id ? { ...p, ...patch } : p); render(); }
+  function updateEffect(id, resource, value) { phases = phases.map((p) => p.id === id ? { ...p, effects: { ...p.effects, [resource]: num(value, 0) } } : p); render(); }
   function saveModel() {
-    const item = currentItem();
-    const all = readModels();
+    const item = currentItem(); const all = readModels();
     all[item.id || titleOf(item)] = { scenarioId: item.id || null, scenarioTitle: titleOf(item), phaseSet: currentSet().name, phases, updatedAt: new Date().toISOString() };
-    writeModels(all);
-    alert("Phasenmodell gespeichert.");
+    writeModels(all); alert("Phasenmodell gespeichert.");
   }
   function render() {
-    const item = currentItem();
-    const state = stateOf(item);
-    const resources = resourceNames(state);
-    const analysis = analyzePhases(state, phases, resources);
+    const item = currentItem(), state = stateOf(item), resources = resourceNames(state), analysis = analyzePhases(state, phases, resources);
     currentReport = buildReport(item, currentSet(), phases, analysis);
     const topTone = analysis.overallRisk >= 60 ? "bad" : analysis.overallRisk >= 30 ? "warn" : "ok";
-    const trajectoriesHtml = resources.map((res) => {
-      const series = analysis.trajectories[res] || [];
-      const last = series.at(-1)?.value ?? 3;
-      const t = toneForValue(last, res);
-      const [bg, border, color] = colors(t);
-      return `<div style="border:1px solid ${border};background:${bg};border-radius:16px;padding:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b style="color:#0f172a">${esc(res)}</b><span style="color:${color};font-weight:900">${last}/5</span></div><div style="font-size:12px;color:#475569;margin-top:6px">${series.map((s) => `${esc(s.phase)}: ${s.value}`).join(" → ")}</div></div>`;
-    }).join("");
-    const phaseCards = phases.map((p, idx) => {
-      const tip = analysis.tips.find((t) => t.phase === p.name);
-      const rec = analysis.recommended.find((r) => r.phase === p.name);
-      return `<div style="border:1px solid #e2e8f0;border-radius:18px;background:#f8fafc;padding:14px">
-        <div style="display:flex;justify-content:space-between;gap:8px;align-items:start;margin-bottom:10px"><b style="font-size:16px;color:#0f172a">${idx + 1}. ${esc(p.name)}</b>${pill(`Risiko ${p.risk}/5`, p.risk >= 4 ? "warn" : "info")}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
-          <label style="font-size:13px;font-weight:850;color:#334155">Ziel<textarea data-field="goal" data-id="${p.id}" style="display:block;width:100%;min-height:72px;margin-top:5px;border:1px solid #cbd5e1;border-radius:12px;padding:9px">${esc(p.goal)}</textarea></label>
-          <label style="font-size:13px;font-weight:850;color:#334155">Dynamik<textarea data-field="dynamic" data-id="${p.id}" style="display:block;width:100%;min-height:72px;margin-top:5px;border:1px solid #cbd5e1;border-radius:12px;padding:9px">${esc(p.dynamic)}</textarea></label>
-          <label style="font-size:13px;font-weight:850;color:#334155">Intervention<textarea data-field="intervention" data-id="${p.id}" style="display:block;width:100%;min-height:72px;margin-top:5px;border:1px solid #cbd5e1;border-radius:12px;padding:9px">${esc(p.intervention)}</textarea></label>
-          <label style="font-size:13px;font-weight:850;color:#334155">Entscheidungspunkt<textarea data-field="decisionPoint" data-id="${p.id}" style="display:block;width:100%;min-height:72px;margin-top:5px;border:1px solid #cbd5e1;border-radius:12px;padding:9px">${esc(p.decisionPoint)}</textarea></label>
-        </div>
-        <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">${resources.map((res) => `<label style="font-size:12px;font-weight:850;color:#334155">${esc(res)} Wirkung <b>${num(p.effects?.[res],0)}</b><input data-effect="${esc(res)}" data-id="${p.id}" type="range" min="-2" max="2" value="${num(p.effects?.[res],0)}" style="width:100%;accent-color:#020617"></label>`).join("")}</div>
-        ${tip ? `<div style="margin-top:10px">${pill(`Kipppunkt: ${tip.reason}`, tip.severity === "hoch" ? "bad" : "warn")}</div>` : ""}
-        ${rec ? `<div style="margin-top:10px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:14px;padding:10px;color:#1e3a8a;font-size:13px"><b>Empfohlene Intervention:</b> ${esc(rec.intervention)}<br><b>Entscheidungspunkt:</b> ${esc(rec.decisionPoint)}</div>` : ""}
-      </div>`;
-    }).join("");
-    out.innerHTML = `
-      <section style="border:1px solid ${colors(topTone)[1]};background:${colors(topTone)[0]};border-radius:20px;padding:16px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:${colors(topTone)[2]}">Verlaufssimulation</div>
-        <h3 style="margin:6px 0 6px;font-size:22px;color:#0f172a">${analysis.tips.length ? `${analysis.tips.length} potenzielle Kipppunkte erkannt` : "Verlauf derzeit ohne deutliche Kipppunkte"}</h3>
-        <p style="margin:0;color:#334155">${analysis.tips.length ? "Der Verlauf sollte aktiv gesteuert werden. Besonders kritische Phasen sind unten markiert." : "Die Simulation wirkt stabil. Prüfe trotzdem die Annahmen und Ressourcenwirkungen."}</p>
-      </section>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">
-        <div style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#1d4ed8">Phasen</div><div style="font-size:22px;font-weight:950;color:#0f172a">${phases.length}</div></div>
-        <div style="border:1px solid ${colors(topTone)[1]};background:${colors(topTone)[0]};border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:${colors(topTone)[2]}">Verlaufsrisiko</div><div style="font-size:22px;font-weight:950;color:#0f172a">${analysis.overallRisk}/100</div></div>
-        <div style="border:1px solid #fde68a;background:#fffbeb;border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#92400e">Kipppunkte</div><div style="font-size:22px;font-weight:950;color:#0f172a">${analysis.tips.length}</div></div>
-        <div style="border:1px solid #bbf7d0;background:#ecfdf5;border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#065f46">Interventionen</div><div style="font-size:22px;font-weight:950;color:#0f172a">${analysis.recommended.length}</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:14px;align-items:start">
-        <section style="display:grid;gap:12px">${phaseCards}</section>
-        <aside style="display:grid;gap:12px;position:sticky;top:16px">
-          <section style="border:1px solid #e2e8f0;border-radius:18px;background:white;padding:14px"><h3 style="margin:0 0 10px;color:#0f172a">Ressourcenverlauf</h3><div style="display:grid;gap:8px">${trajectoriesHtml}</div></section>
-          <section style="border:1px solid #e2e8f0;border-radius:18px;background:white;padding:14px"><h3 style="margin:0 0 10px;color:#0f172a">Priorisierte Kipppunkte</h3><ul style="margin:0;padding-left:20px;color:#334155;font-size:14px;line-height:1.6">${analysis.tips.length ? analysis.tips.map((t) => `<li><b>${esc(t.phase)}:</b> ${esc(t.reason)}</li>`).join("") : "<li>Keine deutlichen Kipppunkte.</li>"}</ul></section>
-          <section style="border:1px solid #e2e8f0;border-radius:18px;background:white;padding:14px"><h3 style="margin:0 0 10px;color:#0f172a">Bericht</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button id="ph-copy" style="border:1px solid #cbd5e1;border-radius:12px;background:white;padding:8px 10px;font-weight:900;cursor:pointer">Kopieren</button><button id="ph-txt" style="border:1px solid #cbd5e1;border-radius:12px;background:white;padding:8px 10px;font-weight:900;cursor:pointer">TXT</button></div><pre style="white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:12px;max-height:280px;overflow:auto;font-size:12px">${esc(currentReport)}</pre></section>
-        </aside>
-      </div>
-    `;
+    const trajectoriesHtml = resources.map((res) => { const series = analysis.trajectories[res] || []; const last = series.at(-1)?.value ?? 3; const t = toneForValue(last, res); const [bg,b,c] = colors(t); return `<div style="border:1px solid ${b};background:${bg};border-radius:16px;padding:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b style="color:#0f172a">${esc(res)}</b><span style="color:${c};font-weight:900">${last}/5</span></div><div style="font-size:12px;color:#475569;margin-top:6px">${series.map((s) => `${esc(s.phase)}: ${s.value}`).join(" → ")}</div></div>`; }).join("");
+    const phaseCards = phases.map((p, idx) => { const tip = analysis.tips.find((t) => t.phase === p.name); const rec = analysis.recommended.find((r) => r.phase === p.name); return `<div style="border:1px solid #e2e8f0;border-radius:18px;background:#f8fafc;padding:14px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:start;margin-bottom:10px"><b style="font-size:16px;color:#0f172a">${idx + 1}. ${esc(p.name)}</b>${pill(`Risiko ${p.risk}/5`, p.risk >= 4 ? "warn" : "info")}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px"><label style="font-size:13px;font-weight:850;color:#334155">Ziel<textarea data-field="goal" data-id="${p.id}" style="display:block;width:100%;min-height:72px;margin-top:5px;border:1px solid #cbd5e1;border-radius:12px;padding:9px">${esc(p.goal)}</textarea></label><label style="font-size:13px;font-weight:850;color:#334155">Dynamik<textarea data-field="dynamic" data-id="${p.id}" style="display:block;width:100%;min-height:72px;margin-top:5px;border:1px solid #cbd5e1;border-radius:12px;padding:9px">${esc(p.dynamic)}</textarea></label><label style="font-size:13px;font-weight:850;color:#334155">Intervention<textarea data-field="intervention" data-id="${p.id}" style="display:block;width:100%;min-height:72px;margin-top:5px;border:1px solid #cbd5e1;border-radius:12px;padding:9px">${esc(p.intervention)}</textarea></label><label style="font-size:13px;font-weight:850;color:#334155">Entscheidungspunkt<textarea data-field="decisionPoint" data-id="${p.id}" style="display:block;width:100%;min-height:72px;margin-top:5px;border:1px solid #cbd5e1;border-radius:12px;padding:9px">${esc(p.decisionPoint)}</textarea></label></div><div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">${resources.map((res) => `<label style="font-size:12px;font-weight:850;color:#334155">${esc(res)} Wirkung <b>${num(p.effects?.[res],0)}</b><input data-effect="${esc(res)}" data-id="${p.id}" type="range" min="-2" max="2" value="${num(p.effects?.[res],0)}" style="width:100%;accent-color:#020617"></label>`).join("")}</div>${tip ? `<div style="margin-top:10px">${pill(`Kipppunkt: ${tip.reason}`, tip.severity === "hoch" ? "bad" : "warn")}</div>` : ""}${rec ? `<div style="margin-top:10px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:14px;padding:10px;color:#1e3a8a;font-size:13px"><b>Empfohlene Intervention:</b> ${esc(rec.intervention)}<br><b>Entscheidungspunkt:</b> ${esc(rec.decisionPoint)}</div>` : ""}</div>`; }).join("");
+    out.innerHTML = `<section style="border:1px solid ${colors(topTone)[1]};background:${colors(topTone)[0]};border-radius:20px;padding:16px;margin-bottom:14px"><div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:${colors(topTone)[2]}">Verlaufssimulation</div><h3 style="margin:6px 0 6px;font-size:22px;color:#0f172a">${analysis.tips.length ? `${analysis.tips.length} potenzielle Kipppunkte erkannt` : "Verlauf derzeit ohne deutliche Kipppunkte"}</h3><p style="margin:0;color:#334155">${analysis.tips.length ? "Der Verlauf sollte aktiv gesteuert werden. Besonders kritische Phasen sind unten markiert." : "Die Simulation wirkt stabil. Prüfe trotzdem die Annahmen und Ressourcenwirkungen."}</p></section><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px"><div style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#1d4ed8">Phasen</div><div style="font-size:22px;font-weight:950;color:#0f172a">${phases.length}</div></div><div style="border:1px solid ${colors(topTone)[1]};background:${colors(topTone)[0]};border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:${colors(topTone)[2]}">Verlaufsrisiko</div><div style="font-size:22px;font-weight:950;color:#0f172a">${analysis.overallRisk}/100</div></div><div style="border:1px solid #fde68a;background:#fffbeb;border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#92400e">Kipppunkte</div><div style="font-size:22px;font-weight:950;color:#0f172a">${analysis.tips.length}</div></div><div style="border:1px solid #bbf7d0;background:#ecfdf5;border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#065f46">Interventionen</div><div style="font-size:22px;font-weight:950;color:#0f172a">${analysis.recommended.length}</div></div></div><div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:14px;align-items:start"><section style="display:grid;gap:12px">${phaseCards}</section><aside style="display:grid;gap:12px;position:sticky;top:16px"><section style="border:1px solid #e2e8f0;border-radius:18px;background:white;padding:14px"><h3 style="margin:0 0 10px;color:#0f172a">Ressourcenverlauf</h3><div style="display:grid;gap:8px">${trajectoriesHtml}</div></section><section style="border:1px solid #e2e8f0;border-radius:18px;background:white;padding:14px"><h3 style="margin:0 0 10px;color:#0f172a">Priorisierte Kipppunkte</h3><ul style="margin:0;padding-left:20px;color:#334155;font-size:14px;line-height:1.6">${analysis.tips.length ? analysis.tips.map((t) => `<li><b>${esc(t.phase)}:</b> ${esc(t.reason)}</li>`).join("") : "<li>Keine deutlichen Kipppunkte.</li>"}</ul></section><section style="border:1px solid #e2e8f0;border-radius:18px;background:white;padding:14px"><h3 style="margin:0 0 10px;color:#0f172a">Bericht</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button id="ph-copy" style="border:1px solid #cbd5e1;border-radius:12px;background:white;padding:8px 10px;font-weight:900;cursor:pointer">Kopieren</button><button id="ph-txt" style="border:1px solid #cbd5e1;border-radius:12px;background:white;padding:8px 10px;font-weight:900;cursor:pointer">TXT</button></div><pre style="white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:12px;max-height:280px;overflow:auto;font-size:12px">${esc(currentReport)}</pre></section></aside></div>`;
     out.querySelectorAll("textarea[data-field]").forEach((el) => el.addEventListener("change", () => updatePhase(el.dataset.id, { [el.dataset.field]: el.value })));
     out.querySelectorAll("input[data-effect]").forEach((el) => el.addEventListener("input", () => updateEffect(el.dataset.id, el.dataset.effect, Number(el.value))));
     out.querySelector("#ph-copy")?.addEventListener("click", () => navigator.clipboard?.writeText(currentReport));
-    out.querySelector("#ph-txt")?.addEventListener("click", () => {
-      const blob = new Blob([currentReport], { type: "text/plain;charset=utf-8" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "verlaufssimulation-phasen-2-0.txt";
-      link.click();
-      URL.revokeObjectURL(link.href);
-    });
+    out.querySelector("#ph-txt")?.addEventListener("click", () => { const blob = new Blob([currentReport], { type: "text/plain;charset=utf-8" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "verlaufssimulation-phasen-2-0.txt"; link.click(); URL.revokeObjectURL(link.href); });
   }
   root.querySelector("#ph-reload").onclick = () => integratePhases20(true);
   root.querySelector("#ph-create").onclick = loadExistingOrCreate;
@@ -257,10 +168,22 @@ function renderPhaseDashboard(root) {
   setSelect.onchange = () => { phases = []; loadExistingOrCreate(); };
   loadExistingOrCreate();
 }
+function isVisible(el) {
+  if (!el) return false;
+  const style = window.getComputedStyle(el);
+  const rect = el.getBoundingClientRect();
+  return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+}
 function findPhasesSection() {
   const candidates = [...document.querySelectorAll("section, div")].filter((el) => {
+    if (!isVisible(el)) return false;
+    if (el.dataset.phases20 === "true" || el.closest("[data-phases20='true']")) return false;
+    if (el.closest("[data-dashboard-compare='true'],#clean-db-panel,#consulting-compare-panel")) return false;
     const txt = (el.textContent || "").trim();
-    return txt.startsWith("Phasen") && txt.includes("Phasen-Set") && (txt.includes("Phasen erzeugen") || txt.includes("Phasen bearbeiten"));
+    if (!txt.startsWith("Phasen") || !txt.includes("Phasen-Set")) return false;
+    if (txt.includes("Vergleich+") || txt.includes("Szenario A") || txt.includes("Szenario B")) return false;
+    if (txt.includes("Verlaufssimulation") || txt.includes("Priorisierte Kipppunkte")) return false;
+    return txt.includes("Phasen erzeugen") || txt.includes("Phasen bearbeiten");
   });
   return candidates.sort((a, b) => a.textContent.length - b.textContent.length)[0] || null;
 }
@@ -269,6 +192,7 @@ function integratePhases20(force = false) {
   if (!section) return;
   if (section.dataset.phases20 === "true" && !force) return;
   section.dataset.phases20 = "true";
+  section.setAttribute("data-phases20", "true");
   section.className = "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm";
   renderPhaseDashboard(section);
 }
@@ -284,10 +208,7 @@ export default function App31() {
       if (mutations.some((m) => m.addedNodes?.length)) run();
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      window.cancelAnimationFrame(raf);
-      observer.disconnect();
-    };
+    return () => { window.cancelAnimationFrame(raf); observer.disconnect(); };
   }, []);
   return <App30 />;
 }
