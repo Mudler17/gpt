@@ -3,6 +3,49 @@ import App23 from "./App23.jsx";
 
 const LOCAL_SCENARIOS_KEY = "ki-kernel-szenarien-v8";
 
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function validDate(value) {
+  if (!value) return false;
+  const d = new Date(value);
+  return !Number.isNaN(d.getTime());
+}
+
+function normalizeScenarioDates(item) {
+  const fallback = nowIso();
+  const date = validDate(item?.date) ? item.date
+    : validDate(item?.savedAt) ? item.savedAt
+    : validDate(item?.updatedAt) ? item.updatedAt
+    : validDate(item?.restoredAt) ? item.restoredAt
+    : validDate(item?.createdAt) ? item.createdAt
+    : fallback;
+  return {
+    ...item,
+    date,
+    savedAt: validDate(item?.savedAt) ? item.savedAt : date,
+    createdAt: validDate(item?.createdAt) ? item.createdAt : date,
+    updatedAt: validDate(item?.updatedAt) ? item.updatedAt : date
+  };
+}
+
+function repairLocalScenarioDates() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LOCAL_SCENARIOS_KEY) || "[]");
+    if (!Array.isArray(raw)) return;
+    let changed = false;
+    const repaired = raw.map((item) => {
+      const next = normalizeScenarioDates(item || {});
+      if (next.date !== item?.date || next.savedAt !== item?.savedAt || next.createdAt !== item?.createdAt || next.updatedAt !== item?.updatedAt) changed = true;
+      return next;
+    });
+    if (changed) localStorage.setItem(LOCAL_SCENARIOS_KEY, JSON.stringify(repaired));
+  } catch {
+    // no-op
+  }
+}
+
 function toneStyle(tone) {
   if (tone === "ok") return { background: "#ecfdf5", borderColor: "#bbf7d0", color: "#065f46" };
   if (tone === "warn") return { background: "#fffbeb", borderColor: "#fde68a", color: "#92400e" };
@@ -35,17 +78,18 @@ async function getJson(url) {
 function readLocalScenarios() {
   try {
     const parsed = JSON.parse(localStorage.getItem(LOCAL_SCENARIOS_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeScenarioDates) : [];
   } catch {
     return [];
   }
 }
 
 function writeLocalScenarios(items) {
-  localStorage.setItem(LOCAL_SCENARIOS_KEY, JSON.stringify(items));
+  localStorage.setItem(LOCAL_SCENARIOS_KEY, JSON.stringify(items.map(normalizeScenarioDates)));
 }
 
 export default function App24() {
+  useMemo(() => repairLocalScenarioDates(), []);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -103,16 +147,21 @@ export default function App24() {
     const ok = window.confirm("Dieses DB-Szenario in den lokalen Browser-Speicher übernehmen? Bestehende lokale Daten werden nicht automatisch synchronisiert.");
     if (!ok) return;
     const existing = readLocalScenarios();
-    const restored = {
+    const timestamp = nowIso();
+    const restored = normalizeScenarioDates({
       ...pack,
       id: pack.id || `db_${Date.now()}`,
       name: `${pack.name || selected?.scenario?.title || "DB-Szenario"} · DB-Restore`,
       source: "database",
-      restoredAt: new Date().toISOString()
-    };
+      date: timestamp,
+      savedAt: timestamp,
+      restoredAt: timestamp,
+      updatedAt: timestamp,
+      createdAt: validDate(pack.createdAt) ? pack.createdAt : timestamp
+    });
     const next = [restored, ...existing.filter((x) => x.id !== restored.id)];
     writeLocalScenarios(next);
-    setLastAction("Szenario wurde lokal übernommen. Lade die Haupt-App hart neu, falls es nicht sofort in den gespeicherten Szenarien erscheint.");
+    setLastAction("Szenario wurde lokal übernommen. Das Restore-Datum ist jetzt kompatibel mit der Speicheransicht. Lade die Haupt-App hart neu, falls es nicht sofort erscheint.");
   }
 
   return (
@@ -137,7 +186,7 @@ export default function App24() {
         }}
         title="Hybrid-Lesemodus: DB-Szenarien anzeigen, ohne LocalStorage zu ersetzen"
       >
-        DB-Lesemodus 2.6
+        DB-Lesemodus 2.6.1
       </button>
 
       {open && (
@@ -159,7 +208,7 @@ export default function App24() {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: ".06em" }}>App 2.6 · Hybrid-Lesemodus</div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: ".06em" }}>App 2.6.1 · Hybrid-Lesemodus</div>
               <h2 style={{ margin: "4px 0 4px", fontSize: 22 }}>DB-Szenarien lesen</h2>
               <p style={{ margin: 0, color: "#475569", fontSize: 14 }}>Die Haupt-App bleibt lokal. Datenbank-Szenarien werden nur angezeigt und bei Bedarf gezielt in den Browser-Speicher übernommen.</p>
             </div>
@@ -216,7 +265,7 @@ export default function App24() {
               <p style={{ color: "#475569", fontSize: 14 }}>Dieses Szenario kann als lokale Kopie in die Haupt-App übernommen werden. Die Datenbank bleibt davon unberührt.</p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button onClick={restoreSelected} disabled={!selected.localStoragePackage} style={{ border: "1px solid #020617", borderRadius: 14, background: selected.localStoragePackage ? "#020617" : "#cbd5e1", color: "white", padding: "10px 12px", cursor: selected.localStoragePackage ? "pointer" : "not-allowed", fontWeight: 900 }}>In lokale App übernehmen</button>
-                <button onClick={() => navigator.clipboard?.writeText(JSON.stringify(selected.localStoragePackage || selected, null, 2))} style={{ border: "1px solid #cbd5e1", borderRadius: 14, background: "white", padding: "10px 12px", cursor: "pointer", fontWeight: 900 }}>Paket kopieren</button>
+                <button onClick={() => navigator.clipboard?.writeText(JSON.stringify(normalizeScenarioDates(selected.localStoragePackage || selected), null, 2))} style={{ border: "1px solid #cbd5e1", borderRadius: 14, background: "white", padding: "10px 12px", cursor: "pointer", fontWeight: 900 }}>Paket kopieren</button>
               </div>
             </div>
           )}
