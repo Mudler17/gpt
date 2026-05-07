@@ -80,10 +80,7 @@ function renderDashboard(root) {
   const options = saved.map((s,i)=>`<option value="${i}">${esc(titleOf(s))}</option>`).join("");
   root.innerHTML = `
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px">
-      <div>
-        <h2 style="margin:0;font-size:24px;font-weight:950;color:#020617">Vergleich+</h2>
-        <p style="margin:6px 0 0;color:#475569;font-size:14px">Zentraler Szenariovergleich als Beratungs-Dashboard.</p>
-      </div>
+      <div><h2 style="margin:0;font-size:24px;font-weight:950;color:#020617">Vergleich+</h2><p style="margin:6px 0 0;color:#475569;font-size:14px">Zentraler Szenariovergleich als Beratungs-Dashboard.</p></div>
       <button id="cmp-reload" style="border:1px solid #020617;border-radius:14px;background:#020617;color:white;padding:10px 14px;font-weight:900;cursor:pointer">Speicher neu laden</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px">
@@ -92,8 +89,7 @@ function renderDashboard(root) {
       <label style="font-weight:900;color:#334155;font-size:14px">Szenario C optional<select id="cmp-c" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:14px;padding:10px;background:white"><option value="">— auswählen —</option>${options}</select></label>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"><button id="cmp-copy" style="border:1px solid #cbd5e1;border-radius:14px;background:white;color:#0f172a;padding:10px 14px;font-weight:900;cursor:pointer">Bericht kopieren</button><button id="cmp-txt" style="border:1px solid #cbd5e1;border-radius:14px;background:white;color:#0f172a;padding:10px 14px;font-weight:900;cursor:pointer">TXT</button></div>
-    <div id="cmp-out"></div>
-  `;
+    <div id="cmp-out"></div>`;
   const a = root.querySelector("#cmp-a"), b = root.querySelector("#cmp-b"), c = root.querySelector("#cmp-c"), out = root.querySelector("#cmp-out");
   if (saved.length > 1) b.value = "1";
   let currentReport = "";
@@ -104,36 +100,14 @@ function renderDashboard(root) {
     const cmp = compare(unique); currentReport = report(cmp);
     const summaryText = cmp.onlyOrigin ? "Inhaltlich nahezu identisch · Unterschied vor allem Herkunft/Version" : cmp.nearlyIdentical ? "Inhaltlich sehr ähnlich · wenig entscheidungsrelevante Differenz" : `Entscheidungsrelevante Differenz bei ${metricLabel(cmp.spreads[0].metric)}`;
     const recommendation = cmp.onlyOrigin ? "Varianten bereinigen oder eine Fassung als Leitszenario festlegen." : `Vorläufig stärkste Option: ${cmp.ranked[0]?.title || "—"}`;
-    const kpis = [
-      ["Ähnlichkeit", cmp.nearlyIdentical ? "hoch" : cmp.maxSpread <= 12 ? "mittel" : "niedrig", cmp.nearlyIdentical ? "ok" : cmp.maxSpread <= 12 ? "info" : "warn"],
-      ["Größter Unterschied", `${metricLabel(cmp.spreads[0].metric)} · ${cmp.spreads[0].spread}`, cmp.spreads[0].spread > 15 ? "warn" : "info"],
-      ["Robustere Option", cmp.ranked[0]?.title || "—", "ok"],
-      ["Nächster Schritt", cmp.onlyOrigin ? "bereinigen" : "prüfen", cmp.onlyOrigin ? "warn" : "info"]
-    ];
-    const metricRows = ["acceptance","governance","resources","learning","risk"].map((m)=>`
-      <div style="border:1px solid #e2e8f0;border-radius:16px;padding:12px;background:white">
-        <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:8px"><b>${metricLabel(m)}</b><span style="color:#64748b;font-size:13px">Differenz ${cmp.spreads.find((s)=>s.metric===m)?.spread ?? 0}</span></div>
-        ${cmp.scored.map((x)=>`<div style="display:grid;grid-template-columns:minmax(130px,220px) 1fr 44px;gap:10px;align-items:center;margin:7px 0"><div style="font-size:13px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.title)}</div>${bar(x.score[m], m)}<b style="font-size:13px;text-align:right">${x.score[m]}</b></div>`).join("")}
-      </div>`).join("");
+    const kpis = [["Ähnlichkeit", cmp.nearlyIdentical ? "hoch" : cmp.maxSpread <= 12 ? "mittel" : "niedrig", cmp.nearlyIdentical ? "ok" : cmp.maxSpread <= 12 ? "info" : "warn"],["Größter Unterschied", `${metricLabel(cmp.spreads[0].metric)} · ${cmp.spreads[0].spread}`, cmp.spreads[0].spread > 15 ? "warn" : "info"],["Robustere Option", cmp.ranked[0]?.title || "—", "ok"],["Nächster Schritt", cmp.onlyOrigin ? "bereinigen" : "prüfen", cmp.onlyOrigin ? "warn" : "info"]];
+    const metricRows = ["acceptance","governance","resources","learning","risk"].map((m)=>`<div style="border:1px solid #e2e8f0;border-radius:16px;padding:12px;background:white"><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:8px"><b>${metricLabel(m)}</b><span style="color:#64748b;font-size:13px">Differenz ${cmp.spreads.find((s)=>s.metric===m)?.spread ?? 0}</span></div>${cmp.scored.map((x)=>`<div style="display:grid;grid-template-columns:minmax(130px,220px) 1fr 44px;gap:10px;align-items:center;margin:7px 0"><div style="font-size:13px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.title)}</div>${bar(x.score[m], m)}<b style="font-size:13px;text-align:right">${x.score[m]}</b></div>`).join("")}</div>`).join("");
     const common = [];
     if (cmp.sharedStrategies.size === 1) common.push(`gleiche stärkste Strategie: ${[...cmp.sharedStrategies][0]}`);
     if (cmp.sharedDeficits.length) common.push(`gemeinsame Engpässe: ${cmp.sharedDeficits.join(", ")}`);
     if (cmp.nearlyIdentical) common.push("sehr ähnliche Kennzahlenlage");
     const diffs = cmp.onlyOrigin ? ["Unterschied betrifft primär Herkunft, Kopie oder Speicherstatus."] : cmp.spreads.filter((s)=>s.spread>3).slice(0,4).map((s)=>`${metricLabel(s.metric)}: ${s.spread} Punkte Spreizung`);
-    out.innerHTML = `
-      <section style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:20px;padding:16px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#1d4ed8">Management Summary</div>
-        <h3 style="margin:6px 0 6px;font-size:22px;color:#0f172a">${esc(summaryText)}</h3>
-        <p style="margin:0;color:#334155">${esc(recommendation)}</p>
-      </section>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">${kpis.map(([k,v,t])=>{ const [bg,b,c]=color(t); return `<div style="border:1px solid ${b};background:${bg};color:${c};border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em">${esc(k)}</div><div style="margin-top:6px;font-size:18px;font-weight:950;color:#0f172a">${esc(v)}</div></div>`; }).join("")}</div>
-      <section style="display:grid;gap:10px;margin-bottom:14px">${metricRows}</section>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:14px">
-        <section style="border:1px solid #e2e8f0;border-radius:18px;padding:14px;background:#fff"><h3 style="margin:0 0 8px;color:#0f172a">Gemeinsamkeiten</h3><ul style="margin:0;padding-left:20px;color:#334155">${(common.length?common:["keine auffälligen Gemeinsamkeiten automatisch erkannt"]).map((x)=>`<li>${esc(x)}</li>`).join("")}</ul></section>
-        <section style="border:1px solid #e2e8f0;border-radius:18px;padding:14px;background:#fff"><h3 style="margin:0 0 8px;color:#0f172a">Entscheidungsrelevante Unterschiede</h3><ul style="margin:0;padding-left:20px;color:#334155">${(diffs.length?diffs:["keine relevanten Unterschiede erkannt"]).map((x)=>`<li>${esc(x)}</li>`).join("")}</ul></section>
-      </div>
-      <section style="border:1px solid #e2e8f0;border-radius:18px;padding:14px;background:#fff"><h3 style="margin:0 0 8px;color:#0f172a">Kritische Punkte</h3><div style="display:grid;gap:8px">${cmp.scored.map((x)=>`<div style="border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:#f8fafc"><b>${esc(x.title)}</b><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${pill(`${x.score.risky.length} riskante Annahmen`, x.score.risky.length?"warn":"ok")} ${pill(`${x.score.deficits.length} Engpässe`, x.score.deficits.length?"warn":"ok")} ${pill(`${x.score.counts.interventions} Interventionen`)}</div></div>`).join("")}</div></section>
-    `;
+    out.innerHTML = `<section style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:20px;padding:16px;margin-bottom:14px"><div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#1d4ed8">Management Summary</div><h3 style="margin:6px 0 6px;font-size:22px;color:#0f172a">${esc(summaryText)}</h3><p style="margin:0;color:#334155">${esc(recommendation)}</p></section><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">${kpis.map(([k,v,t])=>{ const [bg,b,c]=color(t); return `<div style="border:1px solid ${b};background:${bg};color:${c};border-radius:18px;padding:14px"><div style="font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em">${esc(k)}</div><div style="margin-top:6px;font-size:18px;font-weight:950;color:#0f172a">${esc(v)}</div></div>`; }).join("")}</div><section style="display:grid;gap:10px;margin-bottom:14px">${metricRows}</section><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:14px"><section style="border:1px solid #e2e8f0;border-radius:18px;padding:14px;background:#fff"><h3 style="margin:0 0 8px;color:#0f172a">Gemeinsamkeiten</h3><ul style="margin:0;padding-left:20px;color:#334155">${(common.length?common:["keine auffälligen Gemeinsamkeiten automatisch erkannt"]).map((x)=>`<li>${esc(x)}</li>`).join("")}</ul></section><section style="border:1px solid #e2e8f0;border-radius:18px;padding:14px;background:#fff"><h3 style="margin:0 0 8px;color:#0f172a">Entscheidungsrelevante Unterschiede</h3><ul style="margin:0;padding-left:20px;color:#334155">${(diffs.length?diffs:["keine relevanten Unterschiede erkannt"]).map((x)=>`<li>${esc(x)}</li>`).join("")}</ul></section></div><section style="border:1px solid #e2e8f0;border-radius:18px;padding:14px;background:#fff"><h3 style="margin:0 0 8px;color:#0f172a">Kritische Punkte</h3><div style="display:grid;gap:8px">${cmp.scored.map((x)=>`<div style="border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:#f8fafc"><b>${esc(x.title)}</b><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${pill(`${x.score.risky.length} riskante Annahmen`, x.score.risky.length?"warn":"ok")} ${pill(`${x.score.deficits.length} Engpässe`, x.score.deficits.length?"warn":"ok")} ${pill(`${x.score.counts.interventions} Interventionen`)}</div></div>`).join("")}</div></section>`;
   }
   a.onchange = run; b.onchange = run; c.onchange = run;
   root.querySelector("#cmp-reload").onclick = () => integrateCompareDashboard(true);
@@ -142,10 +116,20 @@ function renderDashboard(root) {
   run();
 }
 
+function isVisible(el) {
+  if (!el) return false;
+  const style = window.getComputedStyle(el);
+  const rect = el.getBoundingClientRect();
+  return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+}
 function findCompareSection() {
   const candidates = [...document.querySelectorAll("section, div")].filter((el)=>{
+    if (!isVisible(el)) return false;
+    if (el.closest("#clean-db-panel,#consulting-compare-panel")) return false;
     const txt = (el.textContent || "").trim();
-    return txt.startsWith("Vergleich+") && txt.includes("Szenario A") && txt.includes("Szenario B");
+    if (!txt.startsWith("Vergleich+") || !txt.includes("Szenario A") || !txt.includes("Szenario B")) return false;
+    if (txt.includes("Phasen-Set") || txt.includes("Verlaufssimulation") || txt.includes("Ressourcenverlauf")) return false;
+    return true;
   });
   return candidates.sort((a,b)=>a.textContent.length-b.textContent.length)[0] || null;
 }
@@ -160,9 +144,20 @@ function integrateCompareDashboard(force=false) {
 
 export default function App28() {
   useEffect(() => {
-    const timer = setInterval(() => integrateCompareDashboard(false), 600);
-    integrateCompareDashboard(false);
-    return () => clearInterval(timer);
+    let raf = 0;
+    const run = () => {
+      window.cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(() => integrateCompareDashboard(false));
+    };
+    run();
+    const observer = new MutationObserver((mutations) => {
+      if (mutations.some((m) => m.addedNodes?.length)) run();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      window.cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
   }, []);
   return <App27 />;
 }
