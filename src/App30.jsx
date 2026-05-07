@@ -12,39 +12,61 @@ function isNavigationArea(el) {
   return Boolean(el?.closest?.("nav,aside,[role='navigation']"));
 }
 
+function isInsideCentralImportModule(el) {
+  const container = el?.closest?.("section,main,div");
+  const text = (container?.textContent || "").slice(0, 1800);
+  return /Eingabe/i.test(text) && /Import\+|Dokumentimport|Dateiimport/i.test(text);
+}
+
+function scenarioContextOf(el) {
+  let node = el;
+  for (let i = 0; i < 7 && node; i += 1) {
+    const text = (node.textContent || "").trim();
+    if (/Szenario/i.test(text) && !/Eingabe/i.test(text) && !/System/i.test(text)) return { node, text };
+    node = node.parentElement;
+  }
+  return null;
+}
+
 function hideScenarioHeaderImport() {
   document.querySelectorAll("button,a,[role='button']").forEach((el) => {
-    if (!el || el.dataset.app30ImportChecked === "true") return;
-    el.dataset.app30ImportChecked = "true";
-
+    if (!el || el.dataset.app30Hidden === "true") return;
     if (isNavigationArea(el)) return;
+    if (isInsideCentralImportModule(el)) return;
 
     const text = (el.textContent || "").trim();
     const title = (el.getAttribute("title") || "").trim();
-    const label = `${text} ${title}`.trim();
+    const aria = (el.getAttribute("aria-label") || "").trim();
+    const label = `${text} ${title} ${aria}`.trim();
 
-    const looksLikeImport = /\bImport\+?\b|Dokumentimport|Dateiimport|importieren/i.test(label);
-    if (!looksLikeImport) return;
+    if (!/Import\+?|Dokumentimport|Dateiimport|Datei hochladen|Upload|importieren/i.test(label)) return;
+    if (/speichern|laden|duplizieren|löschen|vergleich|bericht|phase|kopieren|export/i.test(label.toLowerCase())) return;
 
-    const section = el.closest("section, header, main, div");
-    const context = (section?.textContent || "").slice(0, 1400);
+    const scenarioContext = scenarioContextOf(el);
+    if (!scenarioContext) return;
 
-    const inScenarioHead = /Szenario/i.test(context) && !/Eingabe/i.test(context) && !/System/i.test(context);
-    const notCoreAction = !/speichern|laden|duplizieren|löschen|vergleich|bericht|phase/i.test(label.toLowerCase());
+    hideElement(el);
 
-    if (inScenarioHead && notCoreAction) hideElement(el);
+    const possibleCard = el.closest("div,section,header");
+    if (possibleCard) {
+      const cardText = (possibleCard.textContent || "").trim();
+      const compactEnough = cardText.length > 0 && cardText.length < 900;
+      const importCard = /Import\+?|Dokumentimport|Dateiimport|Datei hochladen|Upload|importieren/i.test(cardText);
+      const scenarioCard = /Szenario|Haupt-App|übernehmen/i.test(cardText);
+      const notNavOrCentralImport = !isNavigationArea(possibleCard) && !isInsideCentralImportModule(possibleCard);
+      if (compactEnough && importCard && scenarioCard && notNavOrCentralImport) hideElement(possibleCard);
+    }
   });
 
-  // Falls der Import im Szenario-Kopf als ganze kleine Karte statt als Button gebaut ist.
-  document.querySelectorAll("section,div").forEach((el) => {
-    if (!el || el.dataset.app30ImportCardChecked === "true") return;
-    el.dataset.app30ImportCardChecked = "true";
+  document.querySelectorAll("section,header,div").forEach((el) => {
+    if (!el || el.dataset.app30Hidden === "true") return;
     if (isNavigationArea(el)) return;
+    if (isInsideCentralImportModule(el)) return;
 
     const text = (el.textContent || "").trim();
-    if (text.length < 10 || text.length > 450) return;
-    if (!/Import\+|Dokumentimport|Dateiimport/i.test(text)) return;
-    if (!/Szenario|in die Haupt-App|übernehmen/i.test(text)) return;
+    if (text.length < 8 || text.length > 900) return;
+    if (!/Import\+?|Dokumentimport|Dateiimport|Datei hochladen|Upload|importieren/i.test(text)) return;
+    if (!/Szenario|Haupt-App|übernehmen|Ausgangslage/i.test(text)) return;
     if (/Eingabe|System|Module|Modul/i.test(text)) return;
 
     hideElement(el);
@@ -117,11 +139,13 @@ export default function App30() {
     run();
 
     const observer = new MutationObserver((mutations) => {
-      const relevant = mutations.some((m) => m.addedNodes && m.addedNodes.length > 0);
+      const relevant = mutations.some((m) =>
+        (m.addedNodes && m.addedNodes.length > 0) || m.type === "characterData" || m.type === "attributes"
+      );
       if (relevant) run();
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
 
     return () => {
       window.cancelAnimationFrame(raf);
