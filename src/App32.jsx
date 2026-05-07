@@ -47,7 +47,7 @@ function hideDuplicateTopTabs() {
 
     if (!isScenarioTabBar) return;
 
-    if (text === "Import" || text === "Vergleich") hideElement(el);
+    if (text === "Import" || text === "Vergleich" || text === "Report" || text === "Bericht" || text === "Bericht+") hideElement(el);
   });
 }
 
@@ -66,7 +66,7 @@ function normalizeTerminology() {
 }
 
 function ensureSinglePrimaryEntries() {
-  // Systembereich soll technische Funktionen bündeln, aber keinen Vergleich duplizieren.
+  // Systembereich soll technische Funktionen bündeln, aber keine fachlichen Arbeitsmodule duplizieren.
   document.querySelectorAll("button,a,div,span").forEach((el) => {
     if (!el || el.dataset.app31PrimaryChecked === "true") return;
     el.dataset.app31PrimaryChecked = "true";
@@ -75,6 +75,7 @@ function ensureSinglePrimaryEntries() {
 
     if (text === "Vergleich" && /System/i.test(parentText)) hideElement(el);
     if (text === "Import" && /Dashboard/i.test(parentText) && /Vorlagen/i.test(parentText)) hideElement(el);
+    if ((text === "Report" || text === "Bericht" || text === "Bericht+") && /Dashboard/i.test(parentText) && /Vorlagen/i.test(parentText)) hideElement(el);
   });
 }
 
