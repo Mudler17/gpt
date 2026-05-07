@@ -8,31 +8,9 @@ function hideElement(el) {
   el.setAttribute("aria-hidden", "true");
 }
 
-function isNavigationArea(el) {
-  return Boolean(el?.closest?.("nav,aside,[role='navigation']"));
-}
-
-function isInsideCentralImportModule(el) {
-  const container = el?.closest?.("section,main,div");
-  const text = (container?.textContent || "").slice(0, 1800);
-  return /Eingabe/i.test(text) && /Import\+|Dokumentimport|Dateiimport/i.test(text);
-}
-
-function scenarioContextOf(el) {
-  let node = el;
-  for (let i = 0; i < 7 && node; i += 1) {
-    const text = (node.textContent || "").trim();
-    if (/Szenario/i.test(text) && !/Eingabe/i.test(text) && !/System/i.test(text)) return { node, text };
-    node = node.parentElement;
-  }
-  return null;
-}
-
 function hideHorizontalScenarioImportTab() {
   document.querySelectorAll("button,a,[role='tab']").forEach((el) => {
     if (!el || el.dataset.app30Hidden === "true") return;
-    if (isNavigationArea(el)) return;
-
     const text = (el.textContent || "").trim();
     if (text !== "Import") return;
 
@@ -45,53 +23,6 @@ function hideHorizontalScenarioImportTab() {
       /Annahmen/i.test(tabText);
 
     if (looksLikeScenarioTabs) hideElement(el);
-  });
-}
-
-function hideScenarioHeaderImport() {
-  hideHorizontalScenarioImportTab();
-
-  document.querySelectorAll("button,a,[role='button']").forEach((el) => {
-    if (!el || el.dataset.app30Hidden === "true") return;
-    if (isNavigationArea(el)) return;
-    if (isInsideCentralImportModule(el)) return;
-
-    const text = (el.textContent || "").trim();
-    const title = (el.getAttribute("title") || "").trim();
-    const aria = (el.getAttribute("aria-label") || "").trim();
-    const label = `${text} ${title} ${aria}`.trim();
-
-    if (!/Import\+?|Dokumentimport|Dateiimport|Datei hochladen|Upload|importieren/i.test(label)) return;
-    if (/speichern|laden|duplizieren|löschen|vergleich|bericht|phase|kopieren|export/i.test(label.toLowerCase())) return;
-
-    const scenarioContext = scenarioContextOf(el);
-    if (!scenarioContext) return;
-
-    hideElement(el);
-
-    const possibleCard = el.closest("div,section,header");
-    if (possibleCard) {
-      const cardText = (possibleCard.textContent || "").trim();
-      const compactEnough = cardText.length > 0 && cardText.length < 900;
-      const importCard = /Import\+?|Dokumentimport|Dateiimport|Datei hochladen|Upload|importieren/i.test(cardText);
-      const scenarioCard = /Szenario|Haupt-App|übernehmen/i.test(cardText);
-      const notNavOrCentralImport = !isNavigationArea(possibleCard) && !isInsideCentralImportModule(possibleCard);
-      if (compactEnough && importCard && scenarioCard && notNavOrCentralImport) hideElement(possibleCard);
-    }
-  });
-
-  document.querySelectorAll("section,header,div").forEach((el) => {
-    if (!el || el.dataset.app30Hidden === "true") return;
-    if (isNavigationArea(el)) return;
-    if (isInsideCentralImportModule(el)) return;
-
-    const text = (el.textContent || "").trim();
-    if (text.length < 8 || text.length > 900) return;
-    if (!/Import\+?|Dokumentimport|Dateiimport|Datei hochladen|Upload|importieren/i.test(text)) return;
-    if (!/Szenario|Haupt-App|übernehmen|Ausgangslage/i.test(text)) return;
-    if (/Eingabe|System|Module|Modul/i.test(text)) return;
-
-    hideElement(el);
   });
 }
 
@@ -120,7 +51,7 @@ function normalizeVisibleApp() {
     el.dataset.app30CompareChecked = "true";
   });
 
-  hideScenarioHeaderImport();
+  hideHorizontalScenarioImportTab();
 
   [...document.querySelectorAll("h1")].forEach((h) => {
     if (h.dataset.app30HeroCompact === "true") return;
