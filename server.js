@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import multer from "multer";
 
 import { DATABASE_URL, STORAGE_MODE, maskDatabaseUrl, dbStatus, ensureSchema } from "./server/db.js";
-import { dbCounts, dbAuditLog, dbProjects, dbScenarios, dbAssignments } from "./server/db-inspection.js";
+import { dbCounts, dbAuditLog, dbProjects, dbProjectDetail, dbScenarios, dbScenarioDetail, dbAssignments } from "./server/db-inspection.js";
 import { analyzeBackup, importBackup } from "./server/db-import.js";
 import { extractDocumentHandler, importScenarioHandler, simulateHandler } from "./server/openai-routes.js";
 
@@ -77,7 +77,7 @@ app.get("/api/health", async (_req, res) => {
   const db = await checkDatabaseForHealth();
   res.json({
     ok: true,
-    appVersion: "2.1.1a-server-modularized",
+    appVersion: "2.3-db-detail-restore",
     model: OPENAI_MODEL,
     openaiConfigured: Boolean(OPENAI_API_KEY),
     databaseConfigured: Boolean(DATABASE_URL),
@@ -123,9 +123,27 @@ app.get("/api/db/projects", async (_req, res) => {
     res.status(500).json({ ok: false, error: String(error?.message || error) });
   }
 });
+app.get("/api/db/projects/:id", async (req, res) => {
+  try {
+    const detail = await dbProjectDetail(req.params.id);
+    if (!detail) return res.status(404).json({ ok: false, error: "Projekt nicht gefunden." });
+    res.json({ ok: true, ...detail });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: String(error?.message || error) });
+  }
+});
 app.get("/api/db/scenarios", async (_req, res) => {
   try {
     res.json({ ok: true, items: await dbScenarios() });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: String(error?.message || error) });
+  }
+});
+app.get("/api/db/scenarios/:id", async (req, res) => {
+  try {
+    const detail = await dbScenarioDetail(req.params.id);
+    if (!detail) return res.status(404).json({ ok: false, error: "Szenario nicht gefunden." });
+    res.json({ ok: true, ...detail });
   } catch (error) {
     res.status(500).json({ ok: false, error: String(error?.message || error) });
   }
