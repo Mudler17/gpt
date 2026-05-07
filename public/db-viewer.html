@@ -3,110 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DB-Viewer · KI-Kernel GPT 2.2</title>
+  <title>DB-Viewer · KI-Kernel GPT 2.3</title>
   <style>
-    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a;background:#f1f5f9}body{margin:0;background:#f1f5f9;line-height:1.55}header{background:#020617;color:white;padding:42px 24px}main{max-width:1320px;margin:0 auto;padding:24px}.hero{max-width:1320px;margin:0 auto}h1{font-size:clamp(30px,5vw,52px);line-height:1.05;margin:12px 0}h2{font-size:24px;margin:0 0 12px}h3{font-size:18px;margin:18px 0 8px}.badge{display:inline-block;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 12px;color:#cbd5e1;font-size:14px}.btn,button{appearance:none;border:1px solid #cbd5e1;border-radius:14px;padding:10px 14px;background:white;color:#0f172a;font-weight:900;cursor:pointer;text-decoration:none;display:inline-block}.primary{background:#020617;color:white;border-color:#020617}.card{background:white;border:1px solid #e2e8f0;border-radius:22px;padding:22px;box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.muted{color:#64748b;font-size:14px}.pill{display:inline-block;border-radius:999px;border:1px solid #e2e8f0;background:#f8fafc;padding:5px 10px;margin:2px;font-size:12px;font-weight:800}.ok{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fffbeb;border-color:#fde68a}.bad{background:#fff1f2;border-color:#fecdd3}.info{background:#eff6ff;border-color:#bfdbfe}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}th{background:#f8fafc;position:sticky;top:0}pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:18px;padding:18px;overflow:auto;max-height:520px}code{background:#e2e8f0;border-radius:8px;padding:2px 6px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}input{border:1px solid #cbd5e1;border-radius:14px;padding:10px 12px;font:inherit;background:white}.tablewrap{max-height:520px;overflow:auto;border:1px solid #e2e8f0;border-radius:16px}.small{font-size:12px}.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.split{grid-template-columns:1fr}}
+    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a;background:#f1f5f9}body{margin:0;background:#f1f5f9;line-height:1.55}header{background:#020617;color:white;padding:42px 24px}main{max-width:1320px;margin:0 auto;padding:24px}.hero{max-width:1320px;margin:0 auto}h1{font-size:clamp(30px,5vw,52px);line-height:1.05;margin:12px 0}h2{font-size:24px;margin:0 0 12px}h3{font-size:18px;margin:18px 0 8px}.badge{display:inline-block;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 12px;color:#cbd5e1;font-size:14px}.btn,button{appearance:none;border:1px solid #cbd5e1;border-radius:14px;padding:10px 14px;background:white;color:#0f172a;font-weight:900;cursor:pointer;text-decoration:none;display:inline-block}.primary{background:#020617;color:white;border-color:#020617}.danger{background:#be123c;color:white;border-color:#be123c}.card{background:white;border:1px solid #e2e8f0;border-radius:22px;padding:22px;box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.muted{color:#64748b;font-size:14px}.pill{display:inline-block;border-radius:999px;border:1px solid #e2e8f0;background:#f8fafc;padding:5px 10px;margin:2px;font-size:12px;font-weight:800}.ok{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fffbeb;border-color:#fde68a}.bad{background:#fff1f2;border-color:#fecdd3}.info{background:#eff6ff;border-color:#bfdbfe}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}th{background:#f8fafc;position:sticky;top:0}pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:18px;padding:18px;overflow:auto;max-height:520px}code{background:#e2e8f0;border-radius:8px;padding:2px 6px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}input{border:1px solid #cbd5e1;border-radius:14px;padding:10px 12px;font:inherit;background:white}.tablewrap{max-height:520px;overflow:auto;border:1px solid #e2e8f0;border-radius:16px}.small{font-size:12px}.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.split{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <header>
   <div class="hero">
-    <span class="badge">KI-Kernel GPT 2.2 · Hybridbetrieb vorbereiten</span>
-    <h1>Datenbank lesen, ohne LocalStorage zu ersetzen</h1>
-    <p>Diese Seite zeigt den PostgreSQL-Bestand, prüft Zuordnungen und erzeugt Exportpakete. Sie verändert keine App-Daten im Browser und aktiviert keinen Hybridbetrieb.</p>
+    <span class="badge">KI-Kernel GPT 2.3 · DB-Detail und Restore</span>
+    <h1>Datenbankdetails prüfen und Szenarien kontrolliert wiederherstellen</h1>
+    <p>Diese Seite lädt vollständige Szenario-Details aus PostgreSQL, exportiert LocalStorage-kompatible Pakete und kann ein DB-Szenario bewusst in den Browser-Speicher übernehmen.</p>
     <p><a class="btn" href="/">Zur App</a> <a class="btn" href="/db-setup.html">DB-Setup</a> <a class="btn" href="/backup.html">Backup</a> <a class="btn" href="/projekte.html">Projektakte</a></p>
   </div>
 </header>
 <main>
   <section class="card warn">
     <h2>Arbeitsmodus</h2>
-    <p><code>STORAGE_MODE=local</code> bleibt richtig. Diese Seite ist eine Kontroll- und Leseschicht. Erst wenn DB-Daten zuverlässig sichtbar sind, lohnt sich eine echte Hybrid-Leselogik in der Haupt-App.</p>
+    <p><code>STORAGE_MODE=local</code> bleibt richtig. Diese Seite ist noch keine automatische Synchronisation. Restore bedeutet: ein DB-Szenario wird gezielt in den Browser-Speicher kopiert.</p>
   </section>
 
   <section class="grid">
-    <div class="card">
-      <h2>1. Status</h2>
-      <div class="row"><button class="primary" onclick="loadAll()">Alles aktualisieren</button><button onclick="downloadSnapshot()">Snapshot herunterladen</button></div>
-      <div id="status" style="margin-top:14px"></div>
-    </div>
-    <div class="card">
-      <h2>2. Zählwerte</h2>
-      <div id="counts"></div>
-    </div>
-    <div class="card">
-      <h2>3. Letzter Import</h2>
-      <div id="lastImport"></div>
-    </div>
+    <div class="card"><h2>1. Status</h2><div class="row"><button class="primary" onclick="loadAll()">Alles aktualisieren</button><button onclick="downloadSnapshot()">Snapshot herunterladen</button></div><div id="status" style="margin-top:14px"></div></div>
+    <div class="card"><h2>2. Zählwerte</h2><div id="counts"></div></div>
+    <div class="card"><h2>3. Letzter Import</h2><div id="lastImport"></div></div>
   </section>
 
   <section class="split">
-    <div class="card">
-      <h2>Projekte aus DB</h2>
-      <div class="row" style="margin-bottom:10px"><input id="projectFilter" placeholder="Projekte filtern..." oninput="renderProjects()" /></div>
-      <div id="projects"></div>
-    </div>
-    <div class="card">
-      <h2>Szenarien aus DB</h2>
-      <div class="row" style="margin-bottom:10px"><input id="scenarioFilter" placeholder="Szenarien filtern..." oninput="renderScenarios()" /></div>
-      <div id="scenarios"></div>
-    </div>
+    <div class="card"><h2>Projekte aus DB</h2><div class="row" style="margin-bottom:10px"><input id="projectFilter" placeholder="Projekte filtern..." oninput="renderProjects()" /></div><div id="projects"></div></div>
+    <div class="card"><h2>Szenarien aus DB</h2><div class="row" style="margin-bottom:10px"><input id="scenarioFilter" placeholder="Szenarien filtern..." oninput="renderScenarios()" /></div><div id="scenarios"></div></div>
+  </section>
+
+  <section class="card">
+    <h2>Detailansicht und Restore</h2>
+    <div id="detail"><p class="muted">Wähle in den Tabellen „Details“ aus.</p></div>
   </section>
 
   <section class="grid">
-    <div class="card">
-      <h2>Zuordnungsprüfung</h2>
-      <div id="assignments"></div>
-    </div>
-    <div class="card">
-      <h2>Audit-Log</h2>
-      <div id="audit"></div>
-    </div>
+    <div class="card"><h2>Zuordnungsprüfung</h2><div id="assignments"></div></div>
+    <div class="card"><h2>Audit-Log</h2><div id="audit"></div></div>
   </section>
 
-  <section class="card">
-    <h2>Hybrid-Vorbereitung</h2>
-    <p class="muted">Nächster technischer Schritt: Haupt-App bekommt eine Option „aus Datenbank lesen“, aber LocalStorage bleibt Fallback.</p>
-    <div id="readiness"></div>
-  </section>
-
-  <section class="card">
-    <h2>Roh-Snapshot</h2>
-    <pre id="raw"></pre>
-  </section>
+  <section class="card"><h2>Hybrid-Vorbereitung</h2><p class="muted">Nächster Schritt: Haupt-App bekommt eine optionale DB-Leseliste. LocalStorage bleibt Fallback.</p><div id="readiness"></div></section>
+  <section class="card"><h2>Roh-Snapshot</h2><pre id="raw"></pre></section>
 </main>
 <script>
+const LOCAL_SCENARIOS_KEY='ki-kernel-szenarien-v8';
 let snapshot={health:null,status:null,counts:null,audit:null,projects:null,scenarios:null,assignments:null,loadedAt:null};
+let currentDetail=null;
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
 function pill(text,tone='info'){return `<span class="pill ${tone}">${esc(text)}</span>`;}
 async function getJson(url){const res=await fetch(url,{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||res.statusText);return data;}
-async function loadAll(){
-  const statusEl=document.getElementById('status');
-  statusEl.innerHTML=pill('lade...','info');
-  try{
-    const [health,status,counts,audit,projects,scenarios,assignments]=await Promise.all([
-      getJson('/api/health'),
-      getJson('/api/db/status'),
-      getJson('/api/db/counts'),
-      getJson('/api/db/audit-log?limit=20'),
-      getJson('/api/db/projects'),
-      getJson('/api/db/scenarios'),
-      getJson('/api/db/assignments')
-    ]);
-    snapshot={health,status,counts,audit,projects,scenarios,assignments,loadedAt:new Date().toISOString()};
-    renderAll();
-  }catch(e){statusEl.innerHTML=pill('Fehler: '+e.message,'bad');document.getElementById('raw').textContent=String(e.stack||e.message);}
-}
+async function loadAll(){const statusEl=document.getElementById('status');statusEl.innerHTML=pill('lade...','info');try{const [health,status,counts,audit,projects,scenarios,assignments]=await Promise.all([getJson('/api/health'),getJson('/api/db/status'),getJson('/api/db/counts'),getJson('/api/db/audit-log?limit=20'),getJson('/api/db/projects'),getJson('/api/db/scenarios'),getJson('/api/db/assignments')]);snapshot={health,status,counts,audit,projects,scenarios,assignments,loadedAt:new Date().toISOString()};renderAll();}catch(e){statusEl.innerHTML=pill('Fehler: '+e.message,'bad');document.getElementById('raw').textContent=String(e.stack||e.message);}}
 function renderAll(){renderStatus();renderCounts();renderLastImport();renderProjects();renderScenarios();renderAssignments();renderAudit();renderReadiness();document.getElementById('raw').textContent=JSON.stringify(snapshot,null,2);}
 function renderStatus(){const h=snapshot.health||{};const s=snapshot.status||{};document.getElementById('status').innerHTML=`<div>${pill('App: '+(h.appVersion||'—'),'info')} ${pill('storageMode: '+(h.storageMode||'—'),h.storageMode==='local'?'ok':'warn')} ${pill('DB konfiguriert: '+h.databaseConfigured,h.databaseConfigured?'ok':'bad')}</div><div style="margin-top:8px">${pill('DB erreichbar: '+s.reachable,s.reachable?'ok':'bad')} ${pill('Tabellen bereit: '+s.tablesReady,s.tablesReady?'ok':'warn')}</div><p class="muted">${esc(s.note||h.databaseReachableNote||'')}</p>`;}
 function renderCounts(){const c=snapshot.counts?.counts||{};const html=Object.entries(c).map(([k,v])=>`<tr><td><b>${esc(k)}</b></td><td>${esc(v)}</td></tr>`).join('');document.getElementById('counts').innerHTML=`<table><tbody>${html||'<tr><td>Keine Daten</td></tr>'}</tbody></table>`;}
 function renderLastImport(){const li=snapshot.counts?.lastImport;document.getElementById('lastImport').innerHTML=li?`<p>${pill(li.action,'ok')} ${pill(li.created_at,'info')}</p><pre>${esc(JSON.stringify(li.metadata,null,2))}</pre>`:'<p class="muted">Kein Import gefunden.</p>';}
-function renderProjects(){const items=snapshot.projects?.items||[];const q=(document.getElementById('projectFilter')?.value||'').toLowerCase();const filtered=items.filter(x=>JSON.stringify(x).toLowerCase().includes(q));document.getElementById('projects').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Titel</th><th>Status</th><th>Szenarien</th><th>Nächster Schritt</th></tr></thead><tbody>${filtered.map(p=>`<tr><td><b>${esc(p.title)}</b><br><span class="muted small">${esc(p.id)}</span></td><td>${esc(p.status)}<br>${pill(p.priority||'','info')}</td><td>${esc(p.scenario_count)}</td><td>${esc(p.next_step||'—')}</td></tr>`).join('')||'<tr><td colspan="4">Keine Projekte.</td></tr>'}</tbody></table></div>`;}
-function renderScenarios(){const items=snapshot.scenarios?.items||[];const q=(document.getElementById('scenarioFilter')?.value||'').toLowerCase();const filtered=items.filter(x=>JSON.stringify(x).toLowerCase().includes(q));document.getElementById('scenarios').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Titel</th><th>Projekte</th><th>Versionen</th><th>Export</th></tr></thead><tbody>${filtered.map(s=>`<tr><td><b>${esc(s.title)}</b><br><span class="muted small">${esc(s.id)}</span><br><span class="muted">${esc(s.description||'')}</span></td><td>${s.project_count===0?pill('0','warn'):pill(String(s.project_count),'ok')}</td><td>${pill(String(s.version_count),'info')}</td><td><button onclick="exportScenarioStub('${esc(s.id)}')">Exportpaket</button></td></tr>`).join('')||'<tr><td colspan="4">Keine Szenarien.</td></tr>'}</tbody></table></div>`;}
-function renderAssignments(){const a=snapshot.assignments||{};const un=a.unassignedScenarios||[];const multi=a.multiProjectScenarios||[];const empty=a.projectsWithoutScenarios||[];document.getElementById('assignments').innerHTML=`<h3>Nicht zugeordnete Szenarien</h3>${un.length?`<ul>${un.map(x=>`<li>${pill('Szenario','warn')} <b>${esc(x.title)}</b></li>`).join('')}</ul>`:'<p>'+pill('keine','ok')+'</p>'}<h3>Szenarien in mehreren Projekten</h3>${multi.length?`<ul>${multi.map(x=>`<li>${pill(x.project_count+' Projekte','warn')} <b>${esc(x.title)}</b><br><span class="muted">${esc((x.project_titles||[]).join(', '))}</span></li>`).join('')}</ul>`:'<p>'+pill('keine','ok')+'</p>'}<h3>Projekte ohne Szenarien</h3>${empty.length?`<ul>${empty.map(x=>`<li>${pill('Projekt ohne Szenario','warn')} <b>${esc(x.title)}</b></li>`).join('')}</ul>`:'<p>'+pill('keine','ok')+'</p>'}`;}
+function renderProjects(){const items=snapshot.projects?.items||[];const q=(document.getElementById('projectFilter')?.value||'').toLowerCase();const filtered=items.filter(x=>JSON.stringify(x).toLowerCase().includes(q));document.getElementById('projects').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Titel</th><th>Status</th><th>Szenarien</th><th>Aktion</th></tr></thead><tbody>${filtered.map(p=>`<tr><td><b>${esc(p.title)}</b><br><span class="muted small">${esc(p.id)}</span><br><span class="muted">${esc(p.next_step||'')}</span></td><td>${esc(p.status)}<br>${pill(p.priority||'','info')}</td><td>${esc(p.scenario_count)}</td><td><button onclick="loadProjectDetail('${esc(p.id)}')">Details</button></td></tr>`).join('')||'<tr><td colspan="4">Keine Projekte.</td></tr>'}</tbody></table></div>`;}
+function renderScenarios(){const items=snapshot.scenarios?.items||[];const q=(document.getElementById('scenarioFilter')?.value||'').toLowerCase();const filtered=items.filter(x=>JSON.stringify(x).toLowerCase().includes(q));document.getElementById('scenarios').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Titel</th><th>Projekte</th><th>Versionen</th><th>Aktionen</th></tr></thead><tbody>${filtered.map(s=>`<tr><td><b>${esc(s.title)}</b><br><span class="muted small">${esc(s.id)}</span><br><span class="muted">${esc(s.description||'')}</span></td><td>${s.project_count===0?pill('0','warn'):pill(String(s.project_count),'ok')}</td><td>${pill(String(s.version_count),'info')}</td><td><button onclick="loadScenarioDetail('${esc(s.id)}')">Details</button> <button onclick="downloadScenarioDetail('${esc(s.id)}')">Export</button></td></tr>`).join('')||'<tr><td colspan="4">Keine Szenarien.</td></tr>'}</tbody></table></div>`;}
+async function loadScenarioDetail(id){const el=document.getElementById('detail');el.innerHTML=pill('lade Szenario...','info');try{const data=await getJson('/api/db/scenarios/'+encodeURIComponent(id));currentDetail={type:'scenario',data};const pack=data.localStoragePackage;const projectHtml=(data.projects||[]).map(p=>pill(p.title,'info')).join('')||pill('nicht zugeordnet','warn');el.innerHTML=`<h3>Szenario: ${esc(data.scenario.title)}</h3><p>${projectHtml} ${pill('Versionen: '+(data.versions?.length||0),'info')} ${pack?pill('Restore-Paket vorhanden','ok'):pill('kein state_json','bad')}</p><div class="row"><button class="primary" onclick="downloadCurrentDetail()">vollständiges Paket herunterladen</button>${pack?'<button class="danger" onclick="restoreCurrentScenario()">in Browser-Speicher übernehmen</button>':''}</div><h3>Aktuelle Version</h3><pre>${esc(JSON.stringify(data.currentVersion,null,2))}</pre><h3>LocalStorage-Paket</h3><pre>${esc(JSON.stringify(pack,null,2))}</pre>`;}catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}}
+async function loadProjectDetail(id){const el=document.getElementById('detail');el.innerHTML=pill('lade Projekt...','info');try{const data=await getJson('/api/db/projects/'+encodeURIComponent(id));currentDetail={type:'project',data};el.innerHTML=`<h3>Projekt: ${esc(data.project.title)}</h3><p>${pill(data.project.status,'info')} ${pill(data.project.priority,'info')} ${pill('Szenarien: '+(data.scenarios?.length||0),(data.scenarios?.length||0)?'ok':'warn')}</p><div class="row"><button class="primary" onclick="downloadCurrentDetail()">Projektdetail herunterladen</button></div><h3>Zugeordnete Szenarien</h3><ul>${(data.scenarios||[]).map(s=>`<li><b>${esc(s.title)}</b> <button onclick="loadScenarioDetail('${esc(s.id)}')">Szenario laden</button></li>`).join('')||'<li>Keine Szenarien zugeordnet.</li>'}</ul><h3>Rohdaten</h3><pre>${esc(JSON.stringify(data,null,2))}</pre>`;}catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}}
+async function downloadScenarioDetail(id){const data=await getJson('/api/db/scenarios/'+encodeURIComponent(id));downloadJson(`db-szenario-voll-${id}.json`,data.localStoragePackage||data);}
+function downloadCurrentDetail(){if(!currentDetail)return;const name=currentDetail.type==='scenario'?`db-detail-szenario-${currentDetail.data.scenario?.id}.json`:`db-detail-projekt-${currentDetail.data.project?.id}.json`;downloadJson(name,currentDetail.data.localStoragePackage||currentDetail.data);}
+function restoreCurrentScenario(){const pack=currentDetail?.data?.localStoragePackage;if(!pack){alert('Kein Restore-Paket vorhanden.');return;}if(!confirm('Dieses DB-Szenario wirklich in den Browser-Speicher übernehmen?'))return;const existing=JSON.parse(localStorage.getItem(LOCAL_SCENARIOS_KEY)||'[]');const restored={...pack,id:pack.id||('db_'+Date.now()),name:(pack.name||'DB-Szenario')+' · DB-Restore',restoredAt:new Date().toISOString()};const next=[restored,...existing.filter(x=>x.id!==restored.id)];localStorage.setItem(LOCAL_SCENARIOS_KEY,JSON.stringify(next));alert('Szenario wurde in den Browser-Speicher übernommen. Öffne die Haupt-App neu oder lade sie hart neu.');}
+function renderAssignments(){const a=snapshot.assignments||{};const un=a.unassignedScenarios||[];const multi=a.multiProjectScenarios||[];const empty=a.projectsWithoutScenarios||[];document.getElementById('assignments').innerHTML=`<h3>Nicht zugeordnete Szenarien</h3>${un.length?`<ul>${un.map(x=>`<li>${pill('Szenario','warn')} <b>${esc(x.title)}</b> <button onclick="loadScenarioDetail('${esc(x.id)}')">Details</button></li>`).join('')}</ul>`:'<p>'+pill('keine','ok')+'</p>'}<h3>Szenarien in mehreren Projekten</h3>${multi.length?`<ul>${multi.map(x=>`<li>${pill(x.project_count+' Projekte','warn')} <b>${esc(x.title)}</b> <button onclick="loadScenarioDetail('${esc(x.id)}')">Details</button><br><span class="muted">${esc((x.project_titles||[]).join(', '))}</span></li>`).join('')}</ul>`:'<p>'+pill('keine','ok')+'</p>'}<h3>Projekte ohne Szenarien</h3>${empty.length?`<ul>${empty.map(x=>`<li>${pill('Projekt ohne Szenario','warn')} <b>${esc(x.title)}</b> <button onclick="loadProjectDetail('${esc(x.id)}')">Details</button></li>`).join('')}</ul>`:'<p>'+pill('keine','ok')+'</p>'}`;}
 function renderAudit(){const items=snapshot.audit?.items||[];document.getElementById('audit').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Zeit</th><th>Aktion</th><th>Typ</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.created_at)}</td><td>${esc(x.action)}</td><td>${esc(x.entity_type)}</td></tr>`).join('')||'<tr><td colspan="3">Kein Audit-Log.</td></tr>'}</tbody></table></div>`;}
-function renderReadiness(){const issues=[];if(snapshot.health?.storageMode!=='local')issues.push('STORAGE_MODE ist nicht local. Für die vorbereitende Lesestrecke sollte local bleiben.');if(!snapshot.status?.reachable)issues.push('Datenbank nicht erreichbar.');if(!snapshot.status?.tablesReady)issues.push('Tabellen nicht vollständig.');const counts=snapshot.counts?.counts||{};if(!counts.scenarios)issues.push('Keine Szenarien in DB.');if(!counts.projects)issues.push('Keine Projekte in DB.');const un=snapshot.assignments?.unassignedScenarios||[];if(un.length)issues.push(`${un.length} Szenario(s) sind keinem Projekt zugeordnet.`);const ok=issues.length===0;document.getElementById('readiness').innerHTML=`<div>${pill(ok?'bereit für Hybrid-Lesemodus':'Hybrid-Lesemodus mit Hinweisen vorbereiten',ok?'ok':'warn')}</div><ul>${(issues.length?issues:['DB-Lesestrecke ist plausibel. Nächster Schritt: Haupt-App kann optional DB-Listen lesen.']).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;}
-function exportScenarioStub(id){const item=(snapshot.scenarios?.items||[]).find(x=>x.id===id);if(!item)return;const pack={schema:'ki-kernel-db-scenario-reference',version:'2.2',exportedAt:new Date().toISOString(),note:'Referenzexport aus DB-Viewer. Vollständiges state_json wird in App 2.3 über einen Detail-Endpunkt ergänzt.',scenario:item};downloadJson(`db-szenario-${id}.json`,pack);}
-function downloadSnapshot(){downloadJson('ki-kernel-db-viewer-snapshot-2-2.json',snapshot);}
+function renderReadiness(){const issues=[];if(snapshot.health?.storageMode!=='local')issues.push('STORAGE_MODE ist nicht local. Für Restore-Vorbereitung sollte local bleiben.');if(!snapshot.status?.reachable)issues.push('Datenbank nicht erreichbar.');if(!snapshot.status?.tablesReady)issues.push('Tabellen nicht vollständig.');const counts=snapshot.counts?.counts||{};if(!counts.scenarios)issues.push('Keine Szenarien in DB.');if(!counts.projects)issues.push('Keine Projekte in DB.');const un=snapshot.assignments?.unassignedScenarios||[];if(un.length)issues.push(`${un.length} Szenario(s) sind keinem Projekt zugeordnet.`);const ok=issues.length===0;document.getElementById('readiness').innerHTML=`<div>${pill(ok?'bereit für nächste Hybrid-Stufe':'Hybrid-Stufe mit Hinweisen vorbereiten',ok?'ok':'warn')}</div><ul>${(issues.length?issues:['DB-Detail- und Restore-Strecke ist plausibel.']).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;}
+function downloadSnapshot(){downloadJson('ki-kernel-db-viewer-snapshot-2-3.json',snapshot);}
 function downloadJson(filename,obj){const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);}
 loadAll();
 </script>
