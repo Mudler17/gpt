@@ -28,7 +28,29 @@ function scenarioContextOf(el) {
   return null;
 }
 
+function hideHorizontalScenarioImportTab() {
+  document.querySelectorAll("button,a,[role='tab']").forEach((el) => {
+    if (!el || el.dataset.app30Hidden === "true") return;
+    if (isNavigationArea(el)) return;
+
+    const text = (el.textContent || "").trim();
+    if (text !== "Import") return;
+
+    const tabBar = el.closest("nav,div,section");
+    const tabText = (tabBar?.textContent || "").trim();
+    const looksLikeScenarioTabs =
+      /Dashboard/i.test(tabText) &&
+      /Vorlagen/i.test(tabText) &&
+      /Ausgangslage/i.test(tabText) &&
+      /Annahmen/i.test(tabText);
+
+    if (looksLikeScenarioTabs) hideElement(el);
+  });
+}
+
 function hideScenarioHeaderImport() {
+  hideHorizontalScenarioImportTab();
+
   document.querySelectorAll("button,a,[role='button']").forEach((el) => {
     if (!el || el.dataset.app30Hidden === "true") return;
     if (isNavigationArea(el)) return;
