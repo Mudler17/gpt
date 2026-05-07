@@ -3,153 +3,94 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DB-Setup · KI-Kernel GPT 2.0</title>
+  <title>DB-Setup · KI-Kernel GPT 2.1</title>
   <style>
-    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a;background:#f1f5f9}body{margin:0;background:#f1f5f9;line-height:1.55}header{background:#020617;color:white;padding:42px 24px}main{max-width:1240px;margin:0 auto;padding:24px}.hero{max-width:1240px;margin:0 auto}h1{font-size:clamp(30px,5vw,52px);line-height:1.05;margin:12px 0}h2{font-size:24px;margin:0 0 12px}h3{font-size:18px;margin:18px 0 8px}.badge{display:inline-block;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 12px;color:#cbd5e1;font-size:14px}.btn,button{appearance:none;border:1px solid #cbd5e1;border-radius:14px;padding:10px 14px;background:white;color:#0f172a;font-weight:900;cursor:pointer;text-decoration:none;display:inline-block}.primary{background:#020617;color:white;border-color:#020617}.danger{background:#be123c;color:white;border-color:#be123c}.card{background:white;border:1px solid #e2e8f0;border-radius:22px;padding:22px;box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}label{display:block;font-weight:800;font-size:14px;color:#334155;margin-bottom:6px}select,textarea,input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:14px;padding:10px 12px;font:inherit;background:white}textarea{min-height:110px}.muted{color:#64748b;font-size:14px}.pill{display:inline-block;border-radius:999px;border:1px solid #e2e8f0;background:#f8fafc;padding:5px 10px;margin:2px;font-size:12px;font-weight:800}.ok{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fffbeb;border-color:#fde68a}.bad{background:#fff1f2;border-color:#fecdd3}.info{background:#eff6ff;border-color:#bfdbfe}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}th{background:#f8fafc}pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:18px;padding:18px;overflow:auto;max-height:520px}code{background:#e2e8f0;border-radius:8px;padding:2px 6px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.hr{height:1px;background:#e2e8f0;margin:16px 0}
+    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a;background:#f1f5f9}body{margin:0;background:#f1f5f9;line-height:1.55}header{background:#020617;color:white;padding:42px 24px}main{max-width:1280px;margin:0 auto;padding:24px}.hero{max-width:1280px;margin:0 auto}h1{font-size:clamp(30px,5vw,52px);line-height:1.05;margin:12px 0}h2{font-size:24px;margin:0 0 12px}h3{font-size:18px;margin:18px 0 8px}.badge{display:inline-block;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 12px;color:#cbd5e1;font-size:14px}.btn,button{appearance:none;border:1px solid #cbd5e1;border-radius:14px;padding:10px 14px;background:white;color:#0f172a;font-weight:900;cursor:pointer;text-decoration:none;display:inline-block}.primary{background:#020617;color:white;border-color:#020617}.danger{background:#be123c;color:white;border-color:#be123c}.card{background:white;border:1px solid #e2e8f0;border-radius:22px;padding:22px;box-shadow:0 1px 2px rgba(15,23,42,.05);margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}label{display:block;font-weight:800;font-size:14px;color:#334155;margin-bottom:6px}select,textarea,input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:14px;padding:10px 12px;font:inherit;background:white}textarea{min-height:110px}.muted{color:#64748b;font-size:14px}.pill{display:inline-block;border-radius:999px;border:1px solid #e2e8f0;background:#f8fafc;padding:5px 10px;margin:2px;font-size:12px;font-weight:800}.ok{background:#ecfdf5;border-color:#bbf7d0}.warn{background:#fffbeb;border-color:#fde68a}.bad{background:#fff1f2;border-color:#fecdd3}.info{background:#eff6ff;border-color:#bfdbfe}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}th{background:#f8fafc}pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:18px;padding:18px;overflow:auto;max-height:520px}code{background:#e2e8f0;border-radius:8px;padding:2px 6px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.hr{height:1px;background:#e2e8f0;margin:16px 0}.metric{font-size:34px;font-weight:1000;margin:4px 0}.mini{font-size:12px;color:#64748b}
   </style>
 </head>
 <body>
 <header>
   <div class="hero">
-    <span class="badge">KI-Kernel GPT 2.0 · kontrollierter DB-Import</span>
-    <h1>Datenbankmigration kontrolliert ausführen</h1>
-    <p>Diese Seite steuert die DB-Vorbereitung: Status prüfen, Tabellen anlegen, Backup serverseitig prüfen und kontrolliert importieren. Die App bleibt danach weiterhin im LocalStorage-Modus, bis du bewusst auf Hybridbetrieb umstellst.</p>
+    <span class="badge">KI-Kernel GPT 2.1 · DB-Bestand prüfen</span>
+    <h1>Datenbankbestand kontrollieren</h1>
+    <p>Diese Seite zeigt DB-Status, Datensatzzähler, letzten Import, Audit-Log, Projekte und Szenarien aus PostgreSQL. Die App bleibt weiterhin im LocalStorage-Modus.</p>
     <p><a class="btn" href="/">Zur App</a> <a class="btn" href="/backup.html">Backup</a> <a class="btn" href="/projekte.html">Projektakte</a></p>
   </div>
 </header>
 <main>
-  <section class="card warn">
-    <h2>Sicherheitslogik</h2>
-    <p><strong>Nicht</strong> auf <code>STORAGE_MODE=hybrid</code> oder <code>db</code> umstellen, bevor Schema-Anlage, Dry Run und Import erfolgreich waren. Der echte Import benötigt die Bestätigungsphrase <code>IMPORT IN DATENBANK</code>.</p>
-  </section>
+  <section class="card warn"><h2>Sicherheitslogik</h2><p><strong>STORAGE_MODE bleibt local.</strong> Die Datenbank ist jetzt ein kontrollierter Spiegel des importierten Backups, aber noch nicht Hauptspeicher.</p></section>
 
   <section class="grid">
-    <div class="card">
-      <h2>1. Systemstatus</h2>
-      <p class="muted">Liest <code>/api/health</code>.</p>
-      <button class="primary" onclick="loadHealth()">Healthcheck prüfen</button>
-      <div id="health" style="margin-top:14px"></div>
-    </div>
-    <div class="card">
-      <h2>2. DB-Status</h2>
-      <p class="muted">Liest <code>/api/db/status</code> und prüft, ob PostgreSQL erreichbar ist und Tabellen vorhanden sind.</p>
-      <button class="primary" onclick="loadDbStatus()">DB-Status prüfen</button>
-      <div id="dbStatus" style="margin-top:14px"></div>
-    </div>
+    <div class="card"><h2>1. Systemstatus</h2><button class="primary" onclick="loadHealth()">Healthcheck prüfen</button><div id="health" style="margin-top:14px"></div></div>
+    <div class="card"><h2>2. DB-Status</h2><button class="primary" onclick="loadDbStatus()">DB-Status prüfen</button><div id="dbStatus" style="margin-top:14px"></div></div>
+    <div class="card"><h2>3. DB-Bestand</h2><button class="primary" onclick="loadInspection()">DB-Bestand laden</button><div id="inspectionStatus" style="margin-top:14px"></div></div>
   </section>
 
   <section class="card">
-    <h2>3. Schema anlegen</h2>
-    <p class="muted">Legt die Basistabellen in PostgreSQL an. Dieser Schritt ist idempotent: vorhandene Tabellen werden nicht gelöscht.</p>
-    <div class="grid">
-      <div>
-        <label>Bestätigungsphrase</label>
-        <input id="schemaConfirmation" placeholder="SCHEMA ANLEGEN" />
-      </div>
-      <div style="display:flex;align-items:end">
-        <button class="primary" onclick="ensureSchema()">Schema anlegen</button>
-      </div>
-    </div>
+    <h2>4. Datensatzzähler</h2>
+    <div id="counts" class="grid"></div>
+  </section>
+
+  <section class="grid">
+    <div class="card"><h2>5. Letzter Import</h2><div id="lastImport"></div></div>
+    <div class="card"><h2>6. Audit-Log</h2><div id="auditLog"></div></div>
+  </section>
+
+  <section class="grid">
+    <div class="card"><h2>7. Projekte aus DB</h2><div id="projects"></div></div>
+    <div class="card"><h2>8. Szenarien aus DB</h2><div id="scenarios"></div></div>
+  </section>
+
+  <section class="card">
+    <h2>9. Schema anlegen / reparieren</h2>
+    <p class="muted">Nur nutzen, wenn DB-Status fehlende Tabellen meldet. Vorhandene Tabellen werden nicht gelöscht.</p>
+    <div class="grid"><div><label>Bestätigungsphrase</label><input id="schemaConfirmation" placeholder="SCHEMA ANLEGEN" /></div><div style="display:flex;align-items:end"><button class="primary" onclick="ensureSchema()">Schema anlegen</button></div></div>
     <div id="schemaResult" style="margin-top:14px"></div>
   </section>
 
   <section class="card">
-    <h2>4. Backup laden und lokal analysieren</h2>
-    <p class="muted">Lade ein Vollbackup aus Backup 1.6 hoch. Die lokale Analyse zeigt grob, ob Projekte, Szenarien und Verknüpfungen plausibel sind.</p>
-    <div class="grid">
-      <div><label>Backup-JSON</label><input id="backupFile" type="file" accept=".json,application/json" /></div>
-      <div><label>Zielmodus</label><select id="targetMode"><option value="dry-run">Nur prüfen / Dry Run</option><option value="planned-import">Import vorbereiten</option></select></div>
-    </div>
-    <div class="row" style="margin-top:14px">
-      <button class="primary" onclick="analyzeBackupLocal()">Backup lokal analysieren</button>
-      <button onclick="runServerDryRun()">Server-Dry-Run</button>
-      <button onclick="downloadImportPlan()">Importplan herunterladen</button>
-    </div>
+    <h2>10. Backup erneut importieren</h2>
+    <p class="muted">Nur verwenden, wenn du bewusst ein aktuelleres Vollbackup in die DB schreiben willst. Bereits vorhandene IDs werden aktualisiert.</p>
+    <div class="grid"><div><label>Backup-JSON</label><input id="backupFile" type="file" accept=".json,application/json" /></div><div><label>Zielmodus</label><select id="targetMode"><option value="dry-run">Nur prüfen / Dry Run</option><option value="planned-import">Import vorbereiten</option></select></div></div>
+    <div class="row" style="margin-top:14px"><button class="primary" onclick="analyzeBackupLocal()">Backup lokal analysieren</button><button onclick="runServerDryRun()">Server-Dry-Run</button><button onclick="downloadImportPlan()">Importplan herunterladen</button></div>
     <div id="backupAnalysis" style="margin-top:16px"></div>
-  </section>
-
-  <section class="card bad">
-    <h2>5. Kontrollierten Import ausführen</h2>
-    <p>Dieser Schritt schreibt Projekte, Szenarien, Szenario-Versionen, Projekt-Szenario-Verknüpfungen, Phasen-Sets, Beratungsfälle und ein Audit-Log in PostgreSQL.</p>
-    <div class="grid">
-      <div>
-        <label>Bestätigungsphrase</label>
-        <input id="importConfirmation" placeholder="IMPORT IN DATENBANK" />
-      </div>
-      <div style="display:flex;align-items:end">
-        <button class="danger" onclick="runRealImport()">Backup wirklich importieren</button>
-      </div>
-    </div>
+    <div class="hr"></div>
+    <div class="grid"><div><label>Bestätigungsphrase</label><input id="importConfirmation" placeholder="IMPORT IN DATENBANK" /></div><div style="display:flex;align-items:end"><button class="danger" onclick="runRealImport()">Backup wirklich importieren</button></div></div>
     <div id="importResult" style="margin-top:14px"></div>
   </section>
 
-  <section class="card">
-    <h2>6. Migrationsreife</h2>
-    <div id="readiness"></div>
-  </section>
-
-  <section class="grid">
-    <div class="card">
-      <h2>7. Technischer Importplan</h2>
-      <pre id="plan"></pre>
-    </div>
-    <div class="card">
-      <h2>8. Ergebnisprotokoll</h2>
-      <div class="row"><button onclick="downloadResultLog()">Protokoll herunterladen</button></div>
-      <pre id="resultLog"></pre>
-    </div>
-  </section>
+  <section class="card"><h2>11. Kontrollbewertung</h2><div id="readiness"></div></section>
+  <section class="grid"><div class="card"><h2>12. Technischer Importplan</h2><pre id="plan"></pre></div><div class="card"><h2>13. Ergebnisprotokoll</h2><div class="row"><button onclick="downloadResultLog()">Protokoll herunterladen</button><button onclick="downloadDbInspection()">DB-Prüfung herunterladen</button></div><pre id="resultLog"></pre></div></section>
 </main>
 <script>
-let lastHealth=null;
-let lastDbStatus=null;
-let lastBackup=null;
-let lastPlan=null;
-let lastResultLog=[];
+let lastHealth=null,lastDbStatus=null,lastBackup=null,lastPlan=null,lastCounts=null,lastAudit=null,lastProjects=null,lastScenarios=null,lastResultLog=[];
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
 function pill(text,tone='info'){return `<span class="pill ${tone}">${esc(text)}</span>`;}
 function logResult(label,data){lastResultLog.unshift({at:new Date().toISOString(),label,data});document.getElementById('resultLog').textContent=JSON.stringify(lastResultLog,null,2);}
-async function postJson(url,body){const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||res.statusText);return data;}
-async function loadHealth(){
-  const el=document.getElementById('health');
-  try{const res=await fetch('/api/health',{cache:'no-store'});const data=await res.json();lastHealth=data;el.innerHTML=`<div>${pill('ok: '+data.ok,data.ok?'ok':'bad')} ${pill('Version: '+data.appVersion,'info')} ${pill('storageMode: '+data.storageMode,data.storageMode==='local'?'ok':'warn')}</div><div style="margin-top:8px">${pill('OpenAI: '+data.openaiConfigured,data.openaiConfigured?'ok':'bad')} ${pill('DB konfiguriert: '+data.databaseConfigured,data.databaseConfigured?'ok':'warn')} ${pill('DB aktiv: '+data.databaseActive,data.databaseActive?'warn':'ok')}</div><p class="muted">${esc(data.databaseReachableNote||'')}</p>`;logResult('health',data);renderReadiness();}
-  catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}
-}
-async function loadDbStatus(){
-  const el=document.getElementById('dbStatus');
-  try{const data=await (await fetch('/api/db/status',{cache:'no-store'})).json();lastDbStatus=data;el.innerHTML=`<div>${pill('konfiguriert: '+data.configured,data.configured?'ok':'bad')} ${pill('erreichbar: '+data.reachable,data.reachable?'ok':'bad')} ${pill('Tabellen bereit: '+data.tablesReady,data.tablesReady?'ok':'warn')}</div><p class="muted">${esc(data.note||'')}</p>${Array.isArray(data.missingTables)&&data.missingTables.length?`<h3>Fehlende Tabellen</h3><p>${data.missingTables.map(x=>pill(x,'warn')).join('')}</p>`:''}`;logResult('db-status',data);renderReadiness();}
-  catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}
-}
-async function ensureSchema(){
-  const el=document.getElementById('schemaResult');
-  try{const confirmation=document.getElementById('schemaConfirmation').value;const data=await postJson('/api/db/ensure-schema',{confirmation});el.innerHTML=pill('Schema-Anlage erfolgreich','ok')+`<pre>${esc(JSON.stringify(data,null,2))}</pre>`;logResult('ensure-schema',data);await loadDbStatus();}
-  catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');logResult('ensure-schema-error',{error:e.message});}
-}
+async function getJson(url){const r=await fetch(url,{cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error(d.error||r.statusText);return d;}
+async function postJson(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error(d.error||r.statusText);return d;}
+async function loadHealth(){const el=document.getElementById('health');try{const d=await getJson('/api/health');lastHealth=d;el.innerHTML=`${pill('ok: '+d.ok,d.ok?'ok':'bad')} ${pill('Version: '+d.appVersion,'info')} ${pill('storageMode: '+d.storageMode,d.storageMode==='local'?'ok':'warn')}<br>${pill('OpenAI: '+d.openaiConfigured,d.openaiConfigured?'ok':'bad')} ${pill('DB konfiguriert: '+d.databaseConfigured,d.databaseConfigured?'ok':'warn')} ${pill('DB aktiv: '+d.databaseActive,d.databaseActive?'warn':'ok')}<p class="muted">${esc(d.databaseReachableNote||'')}</p>`;logResult('health',d);renderReadiness();}catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}}
+async function loadDbStatus(){const el=document.getElementById('dbStatus');try{const d=await getJson('/api/db/status');lastDbStatus=d;el.innerHTML=`${pill('konfiguriert: '+d.configured,d.configured?'ok':'bad')} ${pill('erreichbar: '+d.reachable,d.reachable?'ok':'bad')} ${pill('Tabellen bereit: '+d.tablesReady,d.tablesReady?'ok':'warn')}<p class="muted">${esc(d.note||'')}</p>${Array.isArray(d.missingTables)&&d.missingTables.length?`<p>${d.missingTables.map(x=>pill(x,'warn')).join('')}</p>`:''}`;logResult('db-status',d);renderReadiness();}catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}}
+async function loadInspection(){const el=document.getElementById('inspectionStatus');try{const [counts,audit,projects,scenarios]=await Promise.all([getJson('/api/db/counts'),getJson('/api/db/audit-log?limit=10'),getJson('/api/db/projects'),getJson('/api/db/scenarios')]);lastCounts=counts;lastAudit=audit;lastProjects=projects;lastScenarios=scenarios;renderCounts(counts);renderLastImport(counts.lastImport);renderAudit(audit.items||[]);renderProjects(projects.items||[]);renderScenarios(scenarios.items||[]);el.innerHTML=pill('DB-Bestand geladen','ok');logResult('db-inspection',{counts,audit,projects,scenarios});renderReadiness();}catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}}
+function renderCounts(d){const c=d.counts||{};const labels={users:'Benutzer',projects:'Projekte',scenarios:'Szenarien',project_scenarios:'Projekt-Szenario-Links',scenario_versions:'Szenario-Versionen',phase_sets:'Phasen-Sets',consulting_cases:'Beratungsfälle',reports:'Reports',imports:'Importe',audit_log:'Audit-Log'};document.getElementById('counts').innerHTML=Object.entries(labels).map(([k,l])=>`<div class="card"><div class="mini">${l}</div><div class="metric">${c[k]??'—'}</div><div class="mini">${k}</div></div>`).join('');}
+function renderLastImport(item){if(!item){document.getElementById('lastImport').innerHTML=pill('kein Import im Audit-Log','warn');return;}document.getElementById('lastImport').innerHTML=`${pill('Import gefunden','ok')}<p><b>Zeit:</b> ${esc(item.created_at)}</p><p><b>Aktion:</b> ${esc(item.action)}</p><pre>${esc(JSON.stringify(item.metadata,null,2))}</pre>`;}
+function renderAudit(items){document.getElementById('auditLog').innerHTML=items.length?`<table><thead><tr><th>Zeit</th><th>Aktion</th><th>Typ</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.created_at)}</td><td>${esc(x.action)}</td><td>${esc(x.entity_type)}</td></tr>`).join('')}</tbody></table>`:pill('kein Audit-Log','warn');}
+function renderProjects(items){document.getElementById('projects').innerHTML=items.length?`<table><thead><tr><th>Titel</th><th>Status</th><th>Szenarien</th><th>Nächster Schritt</th></tr></thead><tbody>${items.map(x=>`<tr><td><b>${esc(x.title)}</b><div class="mini">${esc(x.id)}</div></td><td>${esc(x.status)}<br>${pill(x.priority||'','info')}</td><td>${esc(x.scenario_count)}</td><td>${esc(x.next_step||'—')}</td></tr>`).join('')}</tbody></table>`:pill('keine Projekte','warn');}
+function renderScenarios(items){document.getElementById('scenarios').innerHTML=items.length?`<table><thead><tr><th>Titel</th><th>Projekte</th><th>Versionen</th><th>Beschreibung</th></tr></thead><tbody>${items.map(x=>`<tr><td><b>${esc(x.title)}</b><div class="mini">${esc(x.id)}</div></td><td>${esc(x.project_count)}</td><td>${esc(x.version_count)}</td><td>${esc(x.description||'—')}</td></tr>`).join('')}</tbody></table>`:pill('keine Szenarien','warn');}
+async function ensureSchema(){const el=document.getElementById('schemaResult');try{const d=await postJson('/api/db/ensure-schema',{confirmation:document.getElementById('schemaConfirmation').value});el.innerHTML=pill('Schema-Anlage erfolgreich','ok')+`<pre>${esc(JSON.stringify(d,null,2))}</pre>`;logResult('ensure-schema',d);await loadDbStatus();}catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}}
 function normalizeBackup(obj){if(obj?.schema==='ki-kernel-local-backup')return obj.data||{};if(obj?.data)return obj.data;return obj||{};}
-async function readBackupFile(){const file=document.getElementById('backupFile').files[0];if(!file)throw new Error('Keine Backup-Datei gewählt.');const raw=JSON.parse(await file.text());const data=normalizeBackup(raw);lastBackup={raw,data};return lastBackup;}
-async function analyzeBackupLocal(){
-  const el=document.getElementById('backupAnalysis');
-  try{const {data}=await readBackupFile();const projects=Array.isArray(data.projects)?data.projects:[];const scenarios=Array.isArray(data.scenarios)?data.scenarios:[];const phaseSets=Array.isArray(data.phaseSets)?data.phaseSets:[];const cases=Array.isArray(data.consultingCases)?data.consultingCases:[];const missingRefs=projects.flatMap(p=>(Array.isArray(p.scenarioIds)?p.scenarioIds:[]).filter(id=>!scenarios.find(s=>s.id===id)).map(id=>({project:p.title,id})));const unassigned=scenarios.filter(s=>!projects.some(p=>Array.isArray(p.scenarioIds)&&p.scenarioIds.includes(s.id)));const sensitive=detectSensitive(JSON.stringify(data));el.innerHTML=`<div>${pill('Projekte: '+projects.length,projects.length?'ok':'warn')} ${pill('Szenarien: '+scenarios.length,scenarios.length?'ok':'warn')} ${pill('Phasen-Sets: '+phaseSets.length,phaseSets.length?'ok':'info')} ${pill('Beratungsfälle: '+cases.length,cases.length?'ok':'info')}</div><div style="margin-top:8px">${pill('fehlende Verweise: '+missingRefs.length,missingRefs.length?'bad':'ok')} ${pill('nicht zugeordnete Szenarien: '+unassigned.length,unassigned.length?'warn':'ok')} ${pill('Sensibilitätsmuster: '+sensitive.length,sensitive.length?'bad':'ok')}</div>${sensitive.length?`<h3>Sensibilitätsmuster</h3><p>${sensitive.map(x=>pill(x,'bad')).join('')}</p>`:''}${missingRefs.length?`<h3>Fehlende Szenario-Verweise</h3><ul>${missingRefs.map(x=>`<li>${esc(x.project)} → ${esc(x.id)}</li>`).join('')}</ul>`:''}`;buildPlan();logResult('local-backup-analysis',{projects:projects.length,scenarios:scenarios.length,phaseSets:phaseSets.length,cases:cases.length,missingRefs,sensitive});renderReadiness();}
-  catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}
-}
-async function runServerDryRun(){
-  const el=document.getElementById('backupAnalysis');
-  try{if(!lastBackup)await readBackupFile();const data=await postJson('/api/db/import-backup/dry-run',lastBackup.raw);el.innerHTML += `<div class="hr"></div><h3>Server-Dry-Run</h3><pre>${esc(JSON.stringify(data,null,2))}</pre>`;logResult('server-dry-run',data);buildPlan();renderReadiness();}
-  catch(e){el.innerHTML += `<p>${pill('Server-Dry-Run Fehler: '+e.message,'bad')}</p>`;logResult('server-dry-run-error',{error:e.message});}
-}
-async function runRealImport(){
-  const el=document.getElementById('importResult');
-  try{if(!lastBackup)await readBackupFile();const confirmation=document.getElementById('importConfirmation').value;if(confirmation!=='IMPORT IN DATENBANK'){el.innerHTML=pill('Bestätigungsphrase falsch. Erforderlich: IMPORT IN DATENBANK','bad');return;}if(!confirm('Backup jetzt wirklich in PostgreSQL importieren? LocalStorage bleibt unverändert.'))return;const data=await postJson('/api/db/import-backup',{backup:lastBackup.raw,confirmation});el.innerHTML=pill('Import erfolgreich','ok')+`<pre>${esc(JSON.stringify(data,null,2))}</pre>`;logResult('real-import',data);await loadDbStatus();renderReadiness();}
-  catch(e){el.innerHTML=pill('Importfehler: '+e.message,'bad');logResult('real-import-error',{error:e.message});}
-}
+async function readBackupFile(){const f=document.getElementById('backupFile').files[0];if(!f)throw new Error('Keine Backup-Datei gewählt.');const raw=JSON.parse(await f.text());lastBackup={raw,data:normalizeBackup(raw)};return lastBackup;}
+async function analyzeBackupLocal(){const el=document.getElementById('backupAnalysis');try{const {data}=await readBackupFile();const projects=Array.isArray(data.projects)?data.projects:[],scenarios=Array.isArray(data.scenarios)?data.scenarios:[],phaseSets=Array.isArray(data.phaseSets)?data.phaseSets:[],cases=Array.isArray(data.consultingCases)?data.consultingCases:[];const missingRefs=projects.flatMap(p=>(Array.isArray(p.scenarioIds)?p.scenarioIds:[]).filter(id=>!scenarios.find(s=>s.id===id)).map(id=>({project:p.title,id})));const sensitive=detectSensitive(JSON.stringify(data));el.innerHTML=`${pill('Projekte: '+projects.length,projects.length?'ok':'warn')} ${pill('Szenarien: '+scenarios.length,scenarios.length?'ok':'warn')} ${pill('Phasen-Sets: '+phaseSets.length,phaseSets.length?'ok':'info')} ${pill('Beratungsfälle: '+cases.length,cases.length?'ok':'info')}<br>${pill('fehlende Verweise: '+missingRefs.length,missingRefs.length?'bad':'ok')} ${pill('Sensibilitätsmuster: '+sensitive.length,sensitive.length?'bad':'ok')}`;buildPlan();logResult('local-backup-analysis',{projects:projects.length,scenarios:scenarios.length,phaseSets:phaseSets.length,cases:cases.length,missingRefs,sensitive});renderReadiness();}catch(e){el.innerHTML=pill('Fehler: '+e.message,'bad');}}
+async function runServerDryRun(){const el=document.getElementById('backupAnalysis');try{if(!lastBackup)await readBackupFile();const d=await postJson('/api/db/import-backup/dry-run',lastBackup.raw);el.innerHTML+=`<div class="hr"></div><h3>Server-Dry-Run</h3><pre>${esc(JSON.stringify(d,null,2))}</pre>`;logResult('server-dry-run',d);renderReadiness();}catch(e){el.innerHTML+=`<p>${pill('Server-Dry-Run Fehler: '+e.message,'bad')}</p>`;}}
+async function runRealImport(){const el=document.getElementById('importResult');try{if(!lastBackup)await readBackupFile();const confirmation=document.getElementById('importConfirmation').value;if(confirmation!=='IMPORT IN DATENBANK'){el.innerHTML=pill('Bestätigungsphrase falsch. Erforderlich: IMPORT IN DATENBANK','bad');return;}if(!confirm('Backup jetzt wirklich in PostgreSQL importieren? LocalStorage bleibt unverändert.'))return;const d=await postJson('/api/db/import-backup',{backup:lastBackup.raw,confirmation});el.innerHTML=pill('Import erfolgreich','ok')+`<pre>${esc(JSON.stringify(d,null,2))}</pre>`;logResult('real-import',d);await loadInspection();}catch(e){el.innerHTML=pill('Importfehler: '+e.message,'bad');}}
 function detectSensitive(text){const hits=[];if(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text))hits.push('E-Mail-Adressen');if(/\b(?:\+49|0)[\d\s\-\/]{7,}\b/.test(text))hits.push('Telefonnummern');if(/\b\d{5}\s+[A-ZÄÖÜ][a-zäöüß]+\b/.test(text))hits.push('Adress-/PLZ-Muster');if(/\b(?:Klient|Klientin|Patient|Patientin|Bewohner|Bewohnerin)\b/i.test(text))hits.push('Klienten-/Patientenkontext');return[...new Set(hits)];}
-function buildPlan(){const data=lastBackup?.data||{};const projects=Array.isArray(data.projects)?data.projects:[];const scenarios=Array.isArray(data.scenarios)?data.scenarios:[];const phaseSets=Array.isArray(data.phaseSets)?data.phaseSets:[];const cases=Array.isArray(data.consultingCases)?data.consultingCases:[];lastPlan={schema:'ki-kernel-db-import-plan',version:'2.0',createdAt:new Date().toISOString(),mode:document.getElementById('targetMode').value,health:lastHealth,dbStatus:lastDbStatus,counts:{projects:projects.length,scenarios:scenarios.length,phaseSets:phaseSets.length,consultingCases:cases.length},steps:['/api/db/status','/api/db/ensure-schema with SCHEMA ANLEGEN','/api/db/import-backup/dry-run','/api/db/import-backup with IMPORT IN DATENBANK','keep STORAGE_MODE=local until verification','later switch to STORAGE_MODE=hybrid'],warnings:['Vor echtem Import Vollbackup archivieren.','Personenbezogene Inhalte vorher bereinigen.','STORAGE_MODE erst nach erfolgreichem Import auf hybrid setzen.']};document.getElementById('plan').textContent=JSON.stringify(lastPlan,null,2);}
-function renderReadiness(){const issues=[];if(!lastHealth)issues.push('Systemstatus noch nicht geprüft.');if(lastHealth&&!lastHealth.databaseConfigured)issues.push('DATABASE_URL ist nicht gesetzt.');if(lastHealth&&lastHealth.storageMode!=='local')issues.push('Für Importvorbereitung sollte STORAGE_MODE=local bleiben.');if(!lastDbStatus)issues.push('DB-Status noch nicht geprüft.');if(lastDbStatus&&!lastDbStatus.reachable)issues.push('Datenbank ist nicht erreichbar.');if(lastDbStatus&&lastDbStatus.reachable&&!lastDbStatus.tablesReady)issues.push('Tabellen fehlen noch. Schema anlegen.');if(!lastBackup)issues.push('Backup wurde noch nicht geladen und analysiert.');const sensitive=lastBackup?detectSensitive(JSON.stringify(lastBackup.data)):[];if(sensitive.length)issues.push('Backup enthält mögliche sensible Inhalte: '+sensitive.join(', '));const ok=!issues.length;document.getElementById('readiness').innerHTML=`<div>${pill(ok?'bereit für kontrollierten Import':'noch nicht bereit',ok?'ok':'warn')}</div><ul>${(issues.length?issues:['Schema vorhanden, Backup geprüft, Import kann kontrolliert ausgeführt werden.']).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;buildPlan();}
-function downloadImportPlan(){if(!lastPlan)buildPlan();downloadJson('ki-kernel-db-importplan-2-0.json',lastPlan);}
-function downloadResultLog(){downloadJson('ki-kernel-db-importprotokoll-2-0.json',{createdAt:new Date().toISOString(),items:lastResultLog});}
+function buildPlan(){const data=lastBackup?.data||{};lastPlan={schema:'ki-kernel-db-import-plan',version:'2.1',createdAt:new Date().toISOString(),health:lastHealth,dbStatus:lastDbStatus,dbCounts:lastCounts?.counts||null,counts:{projects:(data.projects||[]).length||0,scenarios:(data.scenarios||[]).length||0,phaseSets:(data.phaseSets||[]).length||0,consultingCases:(data.consultingCases||[]).length||0},next:['DB-Bestand prüfen','Importprotokoll sichern','STORAGE_MODE weiterhin local lassen','danach Hybridmodus vorbereiten']};document.getElementById('plan').textContent=JSON.stringify(lastPlan,null,2);}
+function renderReadiness(){const issues=[];if(!lastHealth)issues.push('Systemstatus noch nicht geprüft.');if(lastHealth&&lastHealth.storageMode!=='local')issues.push('STORAGE_MODE sollte noch local bleiben.');if(!lastDbStatus)issues.push('DB-Status noch nicht geprüft.');if(lastDbStatus&&!lastDbStatus.reachable)issues.push('Datenbank ist nicht erreichbar.');if(lastDbStatus&&!lastDbStatus.tablesReady)issues.push('Tabellen fehlen.');if(!lastCounts)issues.push('DB-Datensatzzähler noch nicht geladen.');const c=lastCounts?.counts||{};if(lastCounts&&(c.projects??0)<1)issues.push('Keine Projekte in DB.');if(lastCounts&&(c.scenarios??0)<1)issues.push('Keine Szenarien in DB.');const ok=!issues.length;document.getElementById('readiness').innerHTML=`<div>${pill(ok?'DB-Bestand plausibel geprüft':'Kontrolle noch unvollständig',ok?'ok':'warn')}</div><ul>${(issues.length?issues:['DB ist erreichbar, Tabellen sind bereit, Datensätze sind sichtbar. Noch nicht auf Hybrid umstellen.']).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;buildPlan();}
+function downloadImportPlan(){if(!lastPlan)buildPlan();downloadJson('ki-kernel-db-importplan-2-1.json',lastPlan);}
+function downloadResultLog(){downloadJson('ki-kernel-db-importprotokoll-2-1.json',{createdAt:new Date().toISOString(),items:lastResultLog});}
+function downloadDbInspection(){downloadJson('ki-kernel-db-bestandspruefung-2-1.json',{createdAt:new Date().toISOString(),health:lastHealth,dbStatus:lastDbStatus,counts:lastCounts,audit:lastAudit,projects:lastProjects,scenarios:lastScenarios});}
 function downloadJson(filename,obj){const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);}
-loadHealth();
-loadDbStatus();
+loadHealth();loadDbStatus();loadInspection();
 </script>
 </body>
 </html>
