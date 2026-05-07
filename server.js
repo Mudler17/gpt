@@ -71,7 +71,7 @@ app.get("/api/health", async (_req, res) => {
   const db = await checkDatabaseForHealth();
   res.json({
     ok: true,
-    appVersion: "2.4-assignment-editing",
+    appVersion: "2.5-assignment-diagnostics",
     model: OPENAI_MODEL,
     openaiConfigured: Boolean(OPENAI_API_KEY),
     databaseConfigured: Boolean(DATABASE_URL),
