@@ -2,14 +2,13 @@ import React, { useEffect } from "react";
 import App28 from "./App28.jsx";
 
 function hideElement(el) {
-  if (!el) return;
+  if (!el || el.dataset.app30Hidden === "true") return;
   el.dataset.app30Hidden = "true";
   el.style.display = "none";
   el.setAttribute("aria-hidden", "true");
 }
 
 function normalizeVisibleApp() {
-  // Sichtbare Entwicklungs- und Build-Hinweise entfernen.
   const versionPatterns = [
     /KI-Kernel GPT\s*\d+(\.\d+)*/i,
     /App\s*\d+(\.\d+)*/i,
@@ -23,13 +22,10 @@ function normalizeVisibleApp() {
   document.querySelectorAll("body *").forEach((el) => {
     if (!el || el.dataset.app30Checked === "true") return;
     const text = (el.textContent || "").trim();
-    if (text && text.length <= 110 && versionPatterns.some((pattern) => pattern.test(text))) {
-      hideElement(el);
-    }
+    if (text && text.length <= 110 && versionPatterns.some((pattern) => pattern.test(text))) hideElement(el);
     el.dataset.app30Checked = "true";
   });
 
-  // Nur Vergleich+ als Vergleichseinstieg sichtbar lassen.
   document.querySelectorAll("button,a,[role='tab'],nav *,aside *").forEach((el) => {
     if (!el || el.dataset.app30CompareChecked === "true") return;
     const text = (el.textContent || "").trim();
@@ -37,23 +33,24 @@ function normalizeVisibleApp() {
     el.dataset.app30CompareChecked = "true";
   });
 
-  // Kopfbereich etwas kompakter halten, ohne Fachmodule zu verändern.
   [...document.querySelectorAll("h1")].forEach((h) => {
+    if (h.dataset.app30HeroCompact === "true") return;
     const text = h.textContent || "";
     if (/Beratungsfähiger Organisationssimulator/i.test(text)) {
+      h.dataset.app30HeroCompact = "true";
       h.style.fontSize = "clamp(30px, 3.5vw, 48px)";
       h.style.lineHeight = "1.02";
       h.style.marginTop = "6px";
       h.style.marginBottom = "6px";
       const box = h.closest("section, header, div");
-      if (box) {
+      if (box && box.dataset.app30HeroBoxCompact !== "true") {
+        box.dataset.app30HeroBoxCompact = "true";
         box.style.paddingTop = "30px";
         box.style.paddingBottom = "26px";
       }
     }
   });
 
-  // Vergleich+ als zentralen Ort markieren, ohne neue UI-Fläche zu erzeugen.
   document.querySelectorAll("button,a,h2,h3,div,span").forEach((el) => {
     if (!el || el.dataset.app30CentralCompare === "true") return;
     const text = (el.textContent || "").trim();
@@ -66,10 +63,25 @@ function normalizeVisibleApp() {
 
 export default function App30() {
   useEffect(() => {
-    const run = () => normalizeVisibleApp();
+    let raf = 0;
+    const run = () => {
+      window.cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(normalizeVisibleApp);
+    };
+
     run();
-    const timer = window.setInterval(run, 900);
-    return () => window.clearInterval(timer);
+
+    const observer = new MutationObserver((mutations) => {
+      const relevant = mutations.some((m) => m.addedNodes && m.addedNodes.length > 0);
+      if (relevant) run();
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
   }, []);
 
   return <App28 />;
