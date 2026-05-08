@@ -11,7 +11,7 @@ export const REQUIRED_TABLES = [
   "consulting_cases",
   "audit_log"
 ];
-
+let sharedPoolPromise = null;
 export function maskDatabaseUrl(url = DATABASE_URL) {
   if (!url) return null;
   try {
@@ -21,22 +21,37 @@ export function maskDatabaseUrl(url = DATABASE_URL) {
     return "configured-but-not-parseable";
   }
 }
-
 export async function createPool() {
   if (!DATABASE_URL) return null;
-  const mod = await import("pg");
-  const Pool = mod.default?.Pool || mod.Pool;
-  return new Pool({ connectionString: DATABASE_URL });
+
+  if (!sharedPoolPromise) {
+    sharedPoolPromise = import("pg")
+      .then((mod) => {
+        const Pool = mod.default?.Pool || mod.Pool;
+        return new Pool({ connectionString: DATABASE_URL });
+      })
+      .catch((error) => {
+        sharedPoolPromise = null;
+        throw error;
+      });
+  }
+
+  return sharedPoolPromise;
+}
+
+export async function closePool() {
+  if (!sharedPoolPromise) return;
+
+  const pool = await sharedPoolPromise;
+  await pool.end();
+  sharedPoolPromise = null;
 }
 
 export async function withDb(fn) {
   const pool = await createPool();
   if (!pool) throw new Error("DATABASE_URL ist nicht gesetzt.");
-  try {
-    return await fn(pool);
-  } finally {
-    await pool.end().catch(() => {});
-  }
+
+  return await fn(pool);
 }
 
 export async function dbStatus() {
