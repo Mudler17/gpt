@@ -108,6 +108,50 @@ const scenarioSchema = {
   required: ["context", "assumptions", "personas", "resources", "interventions", "strategies", "openQuestions", "warnings"]
 };
 
+class OpenAIJsonParseError extends Error {
+  constructor(message = "OpenAI-Antwort konnte nicht als JSON verarbeitet werden.") {
+    super(message);
+    this.name = "OpenAIJsonParseError";
+    this.statusCode = 502;
+    this.publicMessage = "Die KI-Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.";
+  }
+}
+
+function parseOpenAIJsonResponse(response, context) {
+  const raw = response?.output_text;
+
+  if (typeof raw !== "string" || !raw.trim()) {
+    console.error(`[openai-routes] ${context}: OpenAI response has no output_text`, {
+      outputTextType: typeof raw
+    });
+    throw new OpenAIJsonParseError("OpenAI response output_text is missing or empty.");
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error(`[openai-routes] ${context}: malformed OpenAI JSON response`, {
+      message: error?.message,
+      outputPreview: raw.slice(0, 1000)
+    });
+    throw new OpenAIJsonParseError();
+  }
+}
+
+function sendOpenAIError(res, error, fallbackMessage) {
+  const statusCode = error instanceof OpenAIJsonParseError ? error.statusCode : 500;
+  const publicMessage = error instanceof OpenAIJsonParseError ? error.publicMessage : fallbackMessage;
+
+  if (!(error instanceof OpenAIJsonParseError)) {
+    console.error("[openai-routes] OpenAI route failed", {
+      name: error?.name,
+      message: error?.message
+    });
+  }
+
+  return res.status(statusCode).json({ error: publicMessage });
+}
+
 function requireOpenAI(openai, res) {
   if (!openai) {
     res.status(500).json({ error: "OPENAI_API_KEY fehlt. Setze die Variable in Coolify oder lokal in deiner Umgebung." });
@@ -140,12 +184,9 @@ export async function importScenarioHandler(req, res, openai, model) {
       ],
       text: { format: { type: "json_schema", name: "scenario_draft", strict: true, schema: scenarioSchema } }
     });
-    res.json(JSON.parse(response.output_text));
+    res.json(parseOpenAIJsonResponse(response, "importScenarioHandler"));
   } catch (error) {
-    res.status(500).json({
-      error: "Szenarioimport fehlgeschlagen",
-      details: process.env.NODE_ENV === "production" ? undefined : String(error)
-    });
+    return sendOpenAIError(res, error, "Szenarioimport fehlgeschlagen");
   }
 }
 
@@ -170,11 +211,8 @@ export async function simulateHandler(req, res, openai, model) {
       ],
       text: { format: { type: "json_schema", name: "consulting_report", strict: true, schema: reportSchema } }
     });
-    res.json(JSON.parse(response.output_text));
+    res.json(parseOpenAIJsonResponse(response, "simulateHandler"));
   } catch (error) {
-    res.status(500).json({
-      error: "Simulation fehlgeschlagen",
-      details: process.env.NODE_ENV === "production" ? undefined : String(error)
-    });
+    return sendOpenAIError(res, error, "Simulation fehlgeschlagen");
   }
 }
